@@ -21,6 +21,16 @@ nlp = spacy.load("en_core_web_sm")
 def index():
     return render_template('index.html')
 
+
+@app.route('/Text_Minig')
+def Text_Minig():
+    return render_template('Text_Minig.html')
+
+
+@app.route('/Word2Vector_Code')
+def Word2Vector_Code():
+    return render_template('Word2Vector_Code.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_files():
     if 'files' not in request.files:

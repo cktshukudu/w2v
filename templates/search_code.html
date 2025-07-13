@@ -15,13 +15,66 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
             color: #333;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 0;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar-link {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .navbar-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .navbar-link.active {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 2px 10px rgba(79, 172, 254, 0.5);
         }
 
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 20px auto;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
@@ -328,10 +381,34 @@
             .main-content {
                 padding: 20px;
             }
+
+            .navbar-links {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" class="navbar-brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="fill: white;">
+                    <path d="M12 24C18.6274 24 24 18.6274 24 12C24 5.37258 18.6274 0 12 0C5.37258 0 0 5.37258 0 12C0 18.6274 5.37258 24 12 24Z" fill="#4285F4"/>
+                    <path d="M18.5455 9.45455H12V14.5455H15.8182C16.3636 16.3636 14.7273 17.4545 12 17.4545C9.27273 17.4545 7.09091 15.2727 7.09091 12.5455C7.09091 9.81818 9.27273 7.63636 12 7.63636C13.0909 7.63636 14.1818 8.18182 14.7273 8.72727L16.9091 6.54545C15.8182 5.45455 14.1818 4.90909 12 4.90909C7.63636 4.90909 4.36364 8.18182 4.36364 12.5455C4.36364 16.9091 7.63636 20.1818 12 20.1818C16.3636 20.1818 19.0909 17.4545 19.0909 13.0909C19.0909 11.4545 18.5455 9.45455 18.5455 9.45455Z" fill="white"/>
+                </svg>
+                Automated Research Tool
+            </a>
+             <div class="navbar-links">
+                <a href="#" class="navbar-link">Home</a>
+                <a href="Word2Vector_Code.html" class="navbar-link">Analysis</a>
+                <a href="index.html" class="navbar-link">Search Configuration</a>
+                <a href="#" class="navbar-link">Cleang & Embedding Vector</a>
+                <a href="Text_Minig.html" class="navbar-link">Text Mining</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="header">
             <h1>📚 Google Scholar Research Tool</h1>
@@ -424,7 +501,7 @@
 
             <!-- Results Section -->
             <div class="results-section">
-                <h2 class="section-title">📋 Search Results</h2>
+                <h2 class="section-title"> Search Results</h2>
                 
                 <div id="resultsStats" class="hidden">
                     <p><strong>Total papers found:</strong> <span id="totalPapers">0</span></p>
@@ -454,290 +531,252 @@
         </div>
     </div>
 
-    <script>
-        // Global variables
-        let searchResults = [];
-        let isSearching = false;
-        let downloadProgress = 0;
+   <script>
+    // Global variables
+    let searchResults = [];
+    let isSearching = false;
+    let downloadProgress = 0;
 
-        // DOM elements
-        const searchForm = document.getElementById('searchForm');
-        const currentStatus = document.getElementById('currentStatus');
-        const progressFill = document.getElementById('progressFill');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const logOutput = document.getElementById('logOutput');
-        const resultsTableBody = document.getElementById('resultsTableBody');
-        const resultsStats = document.getElementById('resultsStats');
+    // DOM elements
+    const searchForm = document.getElementById('searchForm');
+    const currentStatus = document.getElementById('currentStatus');
+    const progressFill = document.getElementById('progressFill');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const logOutput = document.getElementById('logOutput');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+    const resultsStats = document.getElementById('resultsStats');
 
-        // Event listeners
-        searchForm.addEventListener('submit', handleSearch);
-        document.getElementById('clearResults').addEventListener('click', clearResults);
-        document.getElementById('downloadRecent').addEventListener('click', () => downloadPapers('recent'));
-        document.getElementById('downloadCited').addEventListener('click', () => downloadPapers('cited'));
-        document.getElementById('exportResults').addEventListener('click', exportResults);
+    // Event listeners
+    searchForm.addEventListener('submit', handleSearch);
+    document.getElementById('clearResults').addEventListener('click', clearResults);
+    document.getElementById('downloadRecent').addEventListener('click', () => downloadPapers('recent'));
+    document.getElementById('downloadCited').addEventListener('click', () => downloadPapers('cited'));
+    document.getElementById('exportResults').addEventListener('click', exportResults);
 
-        // Handle search form submission
-        function handleSearch(e) {
-            e.preventDefault();
-            
-            if (isSearching) {
-                addLog('Search already in progress...', 'warning');
-                return;
-            }
-
-            const formData = {
-                query: document.getElementById('searchQuery').value,
-                startYear: document.getElementById('startYear').value,
-                endYear: document.getElementById('endYear').value,
-                maxPages: document.getElementById('maxPages').value,
-                maxDownloads: document.getElementById('maxDownloads').value,
-                sortBy: document.getElementById('sortBy').value
-            };
-
-            startSearch(formData);
+    // Handle search form submission - UPDATED TO CONNECT TO BACKEND
+    async function handleSearch(e) {
+        e.preventDefault();
+        
+        if (isSearching) {
+            addLog('Search already in progress...', 'warning');
+            return;
         }
 
-        // Start search simulation
-        function startSearch(params) {
+        const formData = {
+            query: document.getElementById('searchQuery').value,
+            startYear: document.getElementById('startYear').value,
+            endYear: document.getElementById('endYear').value,
+            maxPages: document.getElementById('maxPages').value,
+            sortBy: document.getElementById('sortBy').value
+        };
+
+        try {
             isSearching = true;
             loadingSpinner.style.display = 'block';
             updateStatus('Initializing search...');
-            addLog(`Starting search with query: "${params.query}"`);
-            addLog(`Search period: ${params.startYear} - ${params.endYear}`);
+            addLog(`Starting search with query: "${formData.query}"`);
+            addLog(`Search period: ${formData.startYear} - ${formData.endYear}`);
             
-            // Simulate search process
-            simulateSearch(params);
-        }
-
-        // Simulate the search process
-        function simulateSearch(params) {
-            const steps = [
-                { message: 'Encoding search query...', progress: 10 },
-                { message: 'Connecting to Google Scholar...', progress: 20 },
-                { message: 'Scraping search results...', progress: 40 },
-                { message: 'Parsing paper metadata...', progress: 60 },
-                { message: 'Validating PDF links...', progress: 80 },
-                { message: 'Organizing results...', progress: 95 },
-                { message: 'Search completed!', progress: 100 }
-            ];
-
-            let currentStep = 0;
-            const stepInterval = setInterval(() => {
-                if (currentStep < steps.length) {
-                    const step = steps[currentStep];
-                    updateStatus(step.message);
-                    updateProgress(step.progress);
-                    addLog(step.message);
-                    currentStep++;
-                } else {
-                    clearInterval(stepInterval);
-                    completeSearch();
-                }
-            }, 1000);
-        }
-
-        // Complete search and show results
-        function completeSearch() {
+            // Send request to Flask backend
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                searchResults = data.results;
+                displayResults();
+                addLog(data.message);
+                updateStatus('Search completed successfully');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            addLog(`Search failed: ${error.message}`, 'error');
+            updateStatus('Search failed');
+        } finally {
             isSearching = false;
             loadingSpinner.style.display = 'none';
-            updateStatus('Search completed successfully');
-            
-            // Generate mock results
-            generateMockResults();
-            displayResults();
-            
-            addLog('Search completed. Found ' + searchResults.length + ' papers.');
-            addLog('Results are now available in the table below.');
         }
+    }
 
-        // Generate mock search results
-        function generateMockResults() {
-            const mockPapers = [
-                {
-                    title: "Higher Education in the Digital Age: Transforming Learning Paradigms",
-                    year: "2024",
-                    citations: 45,
-                    type: "PDF",
-                    url: "https://example.com/paper1.pdf"
-                },
-                {
-                    title: "Globalization and Educational Reform: A Comparative Analysis",
-                    year: "2023",
-                    citations: 128,
-                    type: "HTML",
-                    url: "https://example.com/paper2"
-                },
-                {
-                    title: "Sustainable Development Goals in Higher Education: Progress and Challenges",
-                    year: "2023",
-                    citations: 89,
-                    type: "PDF",
-                    url: "https://example.com/paper3.pdf"
-                },
-                {
-                    title: "Human Capital Theory and Modern University Education",
-                    year: "2022",
-                    citations: 167,
-                    type: "PDF",
-                    url: "https://example.com/paper4.pdf"
-                },
-                {
-                    title: "Epistemological Foundations of Contemporary Higher Education",
-                    year: "2022",
-                    citations: 203,
-                    type: "HTML",
-                    url: "https://example.com/paper5"
-                }
-            ];
-
-            searchResults = mockPapers;
-        }
-
-        // Display results in table
-        function displayResults() {
-            resultsTableBody.innerHTML = '';
-            
-            searchResults.forEach((paper, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="paper-title" title="${paper.title}">${paper.title}</td>
-                    <td>${paper.year}</td>
-                    <td><span class="citation-count">${paper.citations}</span></td>
-                    <td>${paper.type}</td>
-                    <td>
-                        <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="viewPaper(${index})">
-                            👁️ View
-                        </button>
-                    </td>
-                `;
-                resultsTableBody.appendChild(row);
-            });
-
-            // Update stats
-            document.getElementById('totalPapers').textContent = searchResults.length;
-            document.getElementById('validPdfs').textContent = searchResults.filter(p => p.type === 'PDF').length;
-            document.getElementById('avgCitations').textContent = Math.round(searchResults.reduce((sum, p) => sum + p.citations, 0) / searchResults.length);
-            
-            resultsStats.classList.remove('hidden');
-        }
-
-        // Download papers
-        function downloadPapers(type) {
-            if (searchResults.length === 0) {
-                addLog('No search results available. Please run a search first.', 'error');
-                return;
-            }
-
-            const sortedResults = type === 'recent' 
-                ? [...searchResults].sort((a, b) => b.year - a.year)
-                : [...searchResults].sort((a, b) => b.citations - a.citations);
-
-            addLog(`Starting download of ${type} papers...`);
-            updateStatus(`Downloading ${type} papers...`);
-            
-            // Simulate download process
-            simulateDownload(sortedResults, type);
-        }
-
-        // Simulate download process
-        function simulateDownload(papers, type) {
-            let downloaded = 0;
-            const maxDownloads = parseInt(document.getElementById('maxDownloads').value);
-            const papersToDownload = Math.min(papers.length, maxDownloads);
-
-            const downloadInterval = setInterval(() => {
-                if (downloaded < papersToDownload) {
-                    downloaded++;
-                    const progress = (downloaded / papersToDownload) * 100;
-                    updateProgress(progress);
-                    updateStatus(`Downloading ${type} papers... (${downloaded}/${papersToDownload})`);
-                    addLog(`Downloaded: ${papers[downloaded - 1].title}`);
-                } else {
-                    clearInterval(downloadInterval);
-                    updateStatus(`Download completed! Downloaded ${downloaded} papers.`);
-                    addLog(`Download process completed. ${downloaded} papers downloaded.`);
-                    updateProgress(0);
-                }
-            }, 500);
-        }
-
-        // Clear results
-        function clearResults() {
-            searchResults = [];
-            resultsTableBody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
-                        No results yet. Run a search to see papers here.
-                    </td>
-                </tr>
+    // Display results in table
+    function displayResults() {
+        resultsTableBody.innerHTML = '';
+        
+        searchResults.forEach((paper, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="paper-title" title="${paper.title}">${paper.title}</td>
+                <td>${paper.year}</td>
+                <td><span class="citation-count">${paper.citations}</span></td>
+                <td>${paper.type || 'Unknown'}</td>
+                <td>
+                    <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="viewPaper(${index})">
+                        👁️ View
+                    </button>
+                </td>
             `;
-            resultsStats.classList.add('hidden');
-            updateStatus('Ready to search');
-            updateProgress(0);
-            addLog('Results cleared. Ready for new search.');
+            resultsTableBody.appendChild(row);
+        });
+
+        // Update stats
+        document.getElementById('totalPapers').textContent = searchResults.length;
+        document.getElementById('validPdfs').textContent = searchResults.filter(p => p.url && p.url.toLowerCase().endsWith('.pdf')).length;
+        const avgCitations = searchResults.length > 0 
+            ? Math.round(searchResults.reduce((sum, p) => sum + (p.citations || 0), 0) / searchResults.length)
+            : 0;
+        document.getElementById('avgCitations').textContent = avgCitations;
+        
+        resultsStats.classList.remove('hidden');
+    }
+
+    // Download papers - UPDATED TO CONNECT TO BACKEND
+    async function downloadPapers(type) {
+        if (searchResults.length === 0) {
+            addLog('No search results available. Please run a search first.', 'error');
+            return;
         }
 
-        // Export results
-        function exportResults() {
-            if (searchResults.length === 0) {
-                addLog('No results to export. Please run a search first.', 'error');
-                return;
+        const sortedResults = type === 'recent' 
+            ? [...searchResults].sort((a, b) => b.year - a.year)
+            : [...searchResults].sort((a, b) => b.citations - a.citations);
+
+        addLog(`Starting download of ${type} papers...`);
+        updateStatus(`Downloading ${type} papers...`);
+        
+        try {
+            const response = await fetch('/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: type,
+                    papers: sortedResults,
+                    maxDownloads: document.getElementById('maxDownloads').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                addLog(`Downloaded ${data.downloaded.length} papers`, 'success');
+                updateStatus(`Downloaded ${data.downloaded.length} papers`);
+                
+                // Update the progress bar based on download progress
+                updateProgress(100);
+                
+                // Show download summary
+                const failedDownloads = data.downloaded.filter(d => !d.success).length;
+                if (failedDownloads > 0) {
+                    addLog(`${failedDownloads} downloads failed`, 'warning');
+                }
+            } else {
+                throw new Error(data.message);
             }
+        } catch (error) {
+            addLog(`Download failed: ${error.message}`, 'error');
+            updateStatus('Download failed');
+        }
+    }
 
-            const csvContent = "data:text/csv;charset=utf-8," 
-                + "Title,Year,Citations,Type,URL\n"
-                + searchResults.map(paper => 
-                    `"${paper.title}",${paper.year},${paper.citations},${paper.type},"${paper.url}"`
-                ).join('\n');
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement('a');
-            link.setAttribute('href', encodedUri);
-            link.setAttribute('download', 'scholar_search_results.csv');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            addLog('Results exported to CSV file.');
+    // Export results - UPDATED TO CONNECT TO BACKEND
+    async function exportResults() {
+        if (searchResults.length === 0) {
+            addLog('No results to export. Please run a search first.', 'error');
+            return;
         }
 
-        // View paper (placeholder)
-        function viewPaper(index) {
-            const paper = searchResults[index];
-            addLog(`Opening paper: ${paper.title}`);
-            window.open(paper.url, '_blank');
-        }
-
-        // Update status
-        function updateStatus(message) {
-            currentStatus.textContent = message;
-        }
-
-        // Update progress bar
-        function updateProgress(percentage) {
-            progressFill.style.width = percentage + '%';
-        }
-
-        // Add log message
-        function addLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
+        try {
+            const response = await fetch('/export', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    results: searchResults
+                })
+            });
             
-            const color = type === 'error' ? '#ff6b6b' : type === 'warning' ? '#ffa726' : '#00ff00';
-            logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> <span style="color: ${color};">${message}</span>`;
-            
-            logOutput.appendChild(logEntry);
-            logOutput.scrollTop = logOutput.scrollHeight;
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'scholar_results.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                
+                addLog('Results exported successfully', 'success');
+            } else {
+                throw new Error('Export failed');
+            }
+        } catch (error) {
+            addLog(`Export failed: ${error.message}`, 'error');
         }
+    }
 
-        // Initialize the application
-        function init() {
-            addLog('Google Scholar Research Tool initialized.');
-            addLog('Configure your search parameters and click "Start Search" to begin.');
-        }
+    // Clear results
+    function clearResults() {
+        searchResults = [];
+        resultsTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                    No results yet. Run a search to see papers here.
+                </td>
+            </tr>
+        `;
+        resultsStats.classList.add('hidden');
+        updateStatus('Ready to search');
+        updateProgress(0);
+        addLog('Results cleared. Ready for new search.');
+    }
 
-        // Start the application
-        init();
-    </script>
+    // View paper
+    function viewPaper(index) {
+        const paper = searchResults[index];
+        addLog(`Opening paper: ${paper.title}`);
+        window.open(paper.url, '_blank');
+    }
+
+    // Update status
+    function updateStatus(message) {
+        currentStatus.textContent = message;
+    }
+
+    // Update progress bar
+    function updateProgress(percentage) {
+        progressFill.style.width = percentage + '%';
+    }
+
+    // Add log message
+    function addLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        
+        const color = type === 'error' ? '#ff6b6b' : type === 'warning' ? '#ffa726' : '#00ff00';
+        logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> <span style="color: ${color};">${message}</span>`;
+        
+        logOutput.appendChild(logEntry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    // Initialize the application
+    function init() {
+        addLog('Google Scholar Research Tool initialized.');
+        addLog('Configure your search parameters and click "Start Search" to begin.');
+    }
+
+    // Start the application
+    init();
+</script>
 </body>
 </html>
