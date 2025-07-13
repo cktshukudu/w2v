@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Scholar Research Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .search-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #4facfe;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 25px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .status-card p {
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .results-table th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-weight: 600;
+            color: #555;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .paper-title {
+            font-weight: 600;
+            color: #4facfe;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .citation-count {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .log-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #333;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Google Scholar Research Tool</h1>
+            <p>Search, analyze, and download academic papers with advanced filtering</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Search Configuration Section -->
+            <div class="search-section">
+                <h2 class="section-title">🔍 Search Configuration</h2>
+                
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label for="searchQuery">Search Query</label>
+                        <textarea id="searchQuery" placeholder="Enter your search terms (use AND, OR operators)">Higher Education AND Globalization OR Research OR Reforms OR Epistemology OR SDG4 OR Holistic Paradigm OR Human Capital Theory OR Future directions OR Social Responsibility OR Personality Development</textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startYear">Start Year</label>
+                            <input type="number" id="startYear" value="2014" min="1900" max="2024">
+                        </div>
+                        <div class="form-group">
+                            <label for="endYear">End Year</label>
+                            <input type="number" id="endYear" value="2024" min="1900" max="2024">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="maxPages">Maximum Pages to Search</label>
+                            <input type="number" id="maxPages" value="100" min="1" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="maxDownloads">Maximum Downloads</label>
+                            <input type="number" id="maxDownloads" value="500" min="1" max="1000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sortBy">Sort Results By</label>
+                        <select id="sortBy">
+                            <option value="date">Publication Date</option>
+                            <option value="citations">Citation Count</option>
+                            <option value="relevance">Relevance</option>
+                        </select>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn">
+                            🔍 Start Search
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="clearResults">
+                            🗑️ Clear Results
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Status Section -->
+            <div class="status-section">
+                <h2 class="section-title">📊 Search Status</h2>
+                
+                <div class="status-card">
+                    <h3>Current Operation</h3>
+                    <p id="currentStatus">Ready to search</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="loading-spinner" id="loadingSpinner"></div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" id="downloadRecent">
+                        📥 Download Most Recent
+                    </button>
+                    <button class="btn btn-success" id="downloadCited">
+                        📥 Download Most Cited
+                    </button>
+                    <button class="btn btn-secondary" id="exportResults">
+                        📤 Export Results
+                    </button>
+                </div>
+
+                <div class="log-output" id="logOutput">
+                    <div>System ready. Configure your search parameters above and click "Start Search".</div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section">
+                <h2 class="section-title"> Search Results</h2>
+                
+                <div id="resultsStats" class="hidden">
+                    <p><strong>Total papers found:</strong> <span id="totalPapers">0</span></p>
+                    <p><strong>Valid PDF links:</strong> <span id="validPdfs">0</span></p>
+                    <p><strong>Average citation count:</strong> <span id="avgCitations">0</span></p>
+                </div>
+
+                <table class="results-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Paper Title</th>
+                            <th>Year</th>
+                            <th>Citations</th>
+                            <th>Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                                No results yet. Run a search to see papers here.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+   <script>
+    // Global variables
+    let searchResults = [];
+    let isSearching = false;
+    let downloadProgress = 0;
+
+    // DOM elements
+    const searchForm = document.getElementById('searchForm');
+    const currentStatus = document.getElementById('currentStatus');
+    const progressFill = document.getElementById('progressFill');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const logOutput = document.getElementById('logOutput');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+    const resultsStats = document.getElementById('resultsStats');
+
+    // Event listeners
+    searchForm.addEventListener('submit', handleSearch);
+    document.getElementById('clearResults').addEventListener('click', clearResults);
+    document.getElementById('downloadRecent').addEventListener('click', () => downloadPapers('recent'));
+    document.getElementById('downloadCited').addEventListener('click', () => downloadPapers('cited'));
+    document.getElementById('exportResults').addEventListener('click', exportResults);
+
+    // Handle search form submission - UPDATED TO CONNECT TO BACKEND
+    async function handleSearch(e) {
+        e.preventDefault();
+        
+        if (isSearching) {
+            addLog('Search already in progress...', 'warning');
+            return;
+        }
+
+        const formData = {
+            query: document.getElementById('searchQuery').value,
+            startYear: document.getElementById('startYear').value,
+            endYear: document.getElementById('endYear').value,
+            maxPages: document.getElementById('maxPages').value,
+            sortBy: document.getElementById('sortBy').value
+        };
+
+        try {
+            isSearching = true;
+            loadingSpinner.style.display = 'block';
+            updateStatus('Initializing search...');
+            addLog(`Starting search with query: "${formData.query}"`);
+            addLog(`Search period: ${formData.startYear} - ${formData.endYear}`);
+            
+            // Send request to Flask backend
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                searchResults = data.results;
+                displayResults();
+                addLog(data.message);
+                updateStatus('Search completed successfully');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            addLog(`Search failed: ${error.message}`, 'error');
+            updateStatus('Search failed');
+        } finally {
+            isSearching = false;
+            loadingSpinner.style.display = 'none';
+        }
+    }
+
+    // Display results in table
+    function displayResults() {
+        resultsTableBody.innerHTML = '';
+        
+        searchResults.forEach((paper, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="paper-title" title="${paper.title}">${paper.title}</td>
+                <td>${paper.year}</td>
+                <td><span class="citation-count">${paper.citations}</span></td>
+                <td>${paper.type || 'Unknown'}</td>
+                <td>
+                    <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="viewPaper(${index})">
+                        👁️ View
+                    </button>
+                </td>
+            `;
+            resultsTableBody.appendChild(row);
+        });
+
+        // Update stats
+        document.getElementById('totalPapers').textContent = searchResults.length;
+        document.getElementById('validPdfs').textContent = searchResults.filter(p => p.url && p.url.toLowerCase().endsWith('.pdf')).length;
+        const avgCitations = searchResults.length > 0 
+            ? Math.round(searchResults.reduce((sum, p) => sum + (p.citations || 0), 0) / searchResults.length)
+            : 0;
+        document.getElementById('avgCitations').textContent = avgCitations;
+        
+        resultsStats.classList.remove('hidden');
+    }
+
+    // Download papers - UPDATED TO CONNECT TO BACKEND
+    async function downloadPapers(type) {
+        if (searchResults.length === 0) {
+            addLog('No search results available. Please run a search first.', 'error');
+            return;
+        }
+
+        const sortedResults = type === 'recent' 
+            ? [...searchResults].sort((a, b) => b.year - a.year)
+            : [...searchResults].sort((a, b) => b.citations - a.citations);
+
+        addLog(`Starting download of ${type} papers...`);
+        updateStatus(`Downloading ${type} papers...`);
+        
+        try {
+            const response = await fetch('/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: type,
+                    papers: sortedResults,
+                    maxDownloads: document.getElementById('maxDownloads').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                addLog(`Downloaded ${data.downloaded.length} papers`, 'success');
+                updateStatus(`Downloaded ${data.downloaded.length} papers`);
+                
+                // Update the progress bar based on download progress
+                updateProgress(100);
+                
+                // Show download summary
+                const failedDownloads = data.downloaded.filter(d => !d.success).length;
+                if (failedDownloads > 0) {
+                    addLog(`${failedDownloads} downloads failed`, 'warning');
+                }
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            addLog(`Download failed: ${error.message}`, 'error');
+            updateStatus('Download failed');
+        }
+    }
+
+    // Export results - UPDATED TO CONNECT TO BACKEND
+    async function exportResults() {
+        if (searchResults.length === 0) {
+            addLog('No results to export. Please run a search first.', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/export', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    results: searchResults
+                })
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'scholar_results.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                
+                addLog('Results exported successfully', 'success');
+            } else {
+                throw new Error('Export failed');
+            }
+        } catch (error) {
+            addLog(`Export failed: ${error.message}`, 'error');
+        }
+    }
+
+    // Clear results
+    function clearResults() {
+        searchResults = [];
+        resultsTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                    No results yet. Run a search to see papers here.
+                </td>
+            </tr>
+        `;
+        resultsStats.classList.add('hidden');
+        updateStatus('Ready to search');
+        updateProgress(0);
+        addLog('Results cleared. Ready for new search.');
+    }
+
+    // View paper
+    function viewPaper(index) {
+        const paper = searchResults[index];
+        addLog(`Opening paper: ${paper.title}`);
+        window.open(paper.url, '_blank');
+    }
+
+    // Update status
+    function updateStatus(message) {
+        currentStatus.textContent = message;
+    }
+
+    // Update progress bar
+    function updateProgress(percentage) {
+        progressFill.style.width = percentage + '%';
+    }
+
+    // Add log message
+    function addLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        
+        const color = type === 'error' ? '#ff6b6b' : type === 'warning' ? '#ffa726' : '#00ff00';
+        logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> <span style="color: ${color};">${message}</span>`;
+        
+        logOutput.appendChild(logEntry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    // Initialize the application
+    function init() {
+        addLog('Google Scholar Research Tool initialized.');
+        addLog('Configure your search parameters and click "Start Search" to begin.');
+    }
+
+    // Start the application
+    init();
+</script>
+</body>
+</html>

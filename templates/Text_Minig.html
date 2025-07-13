@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Mining Analysis Suite</title>
+    <style>
+        /* Add your CSS styles here */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+        }
+        
+        /* Navigation Bar */
+        .navbar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .navbar-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .navbar-link {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .navbar-link:hover {
+            background-color: #34495e;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        h1, h2 {
+            color: #2d3748;
+        }
+        
+        h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 0;
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        
+        .file-upload {
+            margin: 20px 0;
+        }
+        
+        .file-input {
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            z-index: -1;
+        }
+        
+        .file-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-label:hover {
+            border-color: #4299e1;
+            background-color: #ebf8ff;
+        }
+        
+        .file-list {
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #edf2f7;
+        }
+        
+        .btn {
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn:hover {
+            background-color: #3182ce;
+        }
+        
+        .btn:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #cbd5e0;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .processing-indicator {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: #edf2f7;
+            border-radius: 3px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #4299e1;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background-color: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2b6cb0;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #718096;
+        }
+        
+        .result-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .tab.active {
+            background-color: #ebf8ff;
+            color: #3182ce;
+            font-weight: 500;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .result-table th {
+            background-color: #f7fafc;
+            padding: 10px;
+            text-align: left;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .result-table td {
+            padding: 10px;
+            border-bottom: 1px solid #edf2f7;
+        }
+        
+        .result-table tr:hover {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" class="navbar-brand">
+                <svg class="icon" viewBox="0 0 24 24" style="fill: white;">
+                    <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" />
+                </svg>
+                Text Mining Suite
+            </a>
+            <div class="navbar-links">
+                <a href="#" class="navbar-link">Home</a>
+                <a href="#" class="navbar-link">Analysis</a>
+                <a href="#" class="navbar-link">Search Configuration</a>
+                <a href="#" class="navbar-link">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>📊 Text Mining Analysis Suite</h1>
+            <p>Advanced text analysis and phrase extraction from PDF documents</p>
+        </div>
+
+        <!-- PDF Upload Section -->
+        <div class="card">
+            <h2>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                </svg>
+                Upload PDF Files
+            </h2>
+            <div class="file-upload">
+                <input type="file" id="pdfInput" class="file-input" multiple accept=".pdf">
+                <label for="pdfInput" class="file-label">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z" />
+                    </svg>
+                    Drop PDF files here or click to browse
+                </label>
+            </div>
+            <div class="file-list" id="fileList"></div>
+            <button class="btn" id="extractTextBtn" disabled>Extract Text from PDFs</button>
+        </div>
+
+        <!-- Analysis Configuration -->
+        <div class="card">
+            <h2>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" />
+                </svg>
+                Analysis Configuration
+            </h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="maxPhraseLength">Max Phrase Length:</label>
+                    <input type="number" id="maxPhraseLength" value="4" min="1" max="10">
+                </div>
+                <div class="control-group">
+                    <label for="minWordLength">Min Word Length:</label>
+                    <input type="number" id="minWordLength" value="2" min="1" max="10">
+                </div>
+                <div class="control-group">
+                    <label for="analysisType">Analysis Type:</label>
+                    <select id="analysisType">
+                        <option value="both">Both Phrases and Words</option>
+                        <option value="phrases">Phrase Analysis</option>
+                        <option value="words">Word Analysis (POS)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn" id="startAnalysisBtn" disabled>Start Analysis</button>
+            <button class="btn btn-secondary" id="clearResultsBtn">Clear Results</button>
+            <button class="btn" id="downloadResultsBtn" style="display: none;">Download Results</button>
+        </div>
+
+        <!-- Processing Indicator -->
+        <div class="processing-indicator" id="processingIndicator">
+            <div class="spinner"></div>
+            <p>Processing your documents...</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card results" id="resultsSection">
+            <h2>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M3,3V21H21V3H3M16,6L18,8L16,10V8.5H13V7.5H16V6M7,10L9,8L7,6V7.5H4V8.5H7V10M10,14L12,12L14,14V12.5H17V11.5H14V10L12,12L10,10V11.5H7V12.5H10V14Z" />
+                </svg>
+                Analysis Results
+            </h2>
+            
+            <div class="stats" id="statsContainer"></div>
+            
+            <div class="result-tabs">
+                <button class="tab active" data-tab="phrases">Phrases</button>
+                <button class="tab" data-tab="nouns">Nouns</button>
+                <button class="tab" data-tab="adjectives">Adjectives</button>
+                <button class="tab" data-tab="verbs">Verbs</button>
+                <button class="tab" data-tab="properNouns">Proper Nouns</button>
+            </div>
+
+            <div class="tab-content active" id="phrases">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Phrase</th>
+                            <th>Count</th>
+                            <th>Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="phrasesTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="nouns">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Noun</th>
+                            <th>Count</th>
+                            <th>Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nounsTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="adjectives">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Adjective</th>
+                            <th>Count</th>
+                            <th>Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adjectivesTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="verbs">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Verb</th>
+                            <th>Count</th>
+                            <th>Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="verbsTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="properNouns">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Proper Noun</th>
+                            <th>Count</th>
+                            <th>Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="properNounsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let uploadedFiles = [];
+        let extractedTexts = [];
+        let analysisResults = {};
+
+        // DOM elements
+        const pdfInput = document.getElementById('pdfInput');
+        const fileList = document.getElementById('fileList');
+        const extractTextBtn = document.getElementById('extractTextBtn');
+        const startAnalysisBtn = document.getElementById('startAnalysisBtn');
+        const clearResultsBtn = document.getElementById('clearResultsBtn');
+        const downloadResultsBtn = document.getElementById('downloadResultsBtn');
+        const processingIndicator = document.getElementById('processingIndicator');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const resultsSection = document.getElementById('resultsSection');
+
+        // File upload handling
+        pdfInput.addEventListener('change', handleFileUpload);
+        const fileLabel = document.querySelector('.file-label');
+        
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            fileLabel.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            fileLabel.classList.remove('dragover');
+        }
+
+        fileLabel.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            pdfInput.files = files;
+            handleFileUpload();
+        }
+
+        function handleFileUpload() {
+            const files = Array.from(pdfInput.files);
+            uploadedFiles = files.filter(file => file.type === 'application/pdf');
+            
+            if (uploadedFiles.length === 0) {
+                alert('Please select valid PDF files.');
+                return;
+            }
+
+            displayFileList();
+            extractTextBtn.disabled = false;
+            startAnalysisBtn.disabled = true;
+            downloadResultsBtn.style.display = 'none';
+        }
+
+        function displayFileList() {
+            fileList.innerHTML = '';
+            if (uploadedFiles.length > 0) {
+                fileList.style.display = 'block';
+                uploadedFiles.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                        </svg>
+                        <span>${file.name}</span>
+                        <span style="margin-left: auto; color: #718096;">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    `;
+                    fileList.appendChild(fileItem);
+                });
+            } else {
+                fileList.style.display = 'none';
+            }
+        }
+
+        // Text extraction from PDFs
+        extractTextBtn.addEventListener('click', async () => {
+            if (uploadedFiles.length === 0) return;
+
+            showProcessing();
+            
+            // Prepare FormData for file upload
+            const formData = new FormData();
+            uploadedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Now extract text from uploaded files
+                    const extractResponse = await fetch('/extract', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            filenames: data.filenames
+                        })
+                    });
+
+                    const extractData = await extractResponse.json();
+                    
+                    if (extractData.success) {
+                        extractedTexts = extractData.results;
+                        const successCount = extractedTexts.filter(r => r.success).length;
+                        
+                        if (successCount > 0) {
+                            startAnalysisBtn.disabled = false;
+                            alert(`Successfully extracted text from ${successCount} files.`);
+                        } else {
+                            alert('No text could be extracted from the uploaded files.');
+                        }
+                    } else {
+                        throw new Error('Failed to extract text from files');
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to upload files');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            } finally {
+                hideProcessing();
+            }
+        });
+
+        // Analysis functionality
+        startAnalysisBtn.addEventListener('click', async () => {
+            if (extractedTexts.length === 0) return;
+
+            const maxPhraseLength = parseInt(document.getElementById('maxPhraseLength').value);
+            const minWordLength = parseInt(document.getElementById('minWordLength').value);
+            const analysisType = document.getElementById('analysisType').value;
+
+            showProcessing();
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        texts: extractedTexts.filter(t => t.success),
+                        maxPhraseLength: maxPhraseLength,
+                        minWordLength: minWordLength,
+                        analysisType: analysisType
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    analysisResults = data.results;
+                    displayResults();
+                    downloadResultsBtn.style.display = 'inline-block';
+                } else {
+                    throw new Error(data.message || 'Analysis failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            } finally {
+                hideProcessing();
+            }
+        });
+
+        // Download results
+        downloadResultsBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/download');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'text_analysis_results.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    throw new Error('Failed to download results');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            }
+        });
+
+        function displayResults() {
+            // Display statistics
+            const statsContainer = document.getElementById('statsContainer');
+            
+            const phrasesCount = analysisResults.phrases.length;
+            const nounsCount = analysisResults.nouns.length;
+            const adjectivesCount = analysisResults.adjectives.length;
+            const verbsCount = analysisResults.verbs.length;
+            const properNounsCount = analysisResults.properNouns.length;
+            const documentsCount = extractedTexts.filter(t => t.success).length;
+
+            statsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-number">${phrasesCount}</div>
+                    <div class="stat-label">Unique Phrases</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${nounsCount}</div>
+                    <div class="stat-label">Unique Nouns</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${adjectivesCount}</div>
+                    <div class="stat-label">Unique Adjectives</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${documentsCount}</div>
+                    <div class="stat-label">Documents Processed</div>
+                </div>
+            `;
+
+            // Populate tables
+            populateTable('phrasesTableBody', analysisResults.phrases, 'Phrase');
+            populateTable('nounsTableBody', analysisResults.nouns, 'Noun');
+            populateTable('adjectivesTableBody', analysisResults.adjectives, 'Adjective');
+            populateTable('verbsTableBody', analysisResults.verbs, 'Verb');
+            populateTable('properNounsTableBody', analysisResults.properNouns, 'ProperNoun');
+
+            resultsSection.style.display = 'block';
+        }
+
+        function populateTable(tableBodyId, data, textKey) {
+            const tableBody = document.getElementById(tableBodyId);
+            const totalCount = data.reduce((sum, item) => sum + item.Count, 0);
+            
+            tableBody.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item[textKey]}</td>
+                    <td>${item.Count}</td>
+                    <td>${totalCount > 0 ? ((item.Count / totalCount) * 100).toFixed(2) + '%' : '0%'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                // Update active tab
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Show corresponding content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Clear results
+        clearResultsBtn.addEventListener('click', () => {
+            uploadedFiles = [];
+            extractedTexts = [];
+            analysisResults = {};
+            pdfInput.value = '';
+            fileList.style.display = 'none';
+            resultsSection.style.display = 'none';
+            extractTextBtn.disabled = true;
+            startAnalysisBtn.disabled = true;
+            downloadResultsBtn.style.display = 'none';
+        });
+
+        // Utility functions
+        function showProcessing() {
+            processingIndicator.style.display = 'block';
+            progressBar.style.display = 'block';
+        }
+
+        function hideProcessing() {
+            processingIndicator.style.display = 'none';
+            progressBar.style.display = 'none';
+        }
+
+        function updateProgress(percentage) {
+            progressFill.style.width = percentage + '%';
+        }
+    </script>
+</body>
+</html>

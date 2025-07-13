@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word2Vec Processing Pipeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .pipeline-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .step-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            border-color: #667eea;
+        }
+
+        .step-card.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .step-number {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.2em;
+        }
+
+        .step-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 15px 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .file-upload-label:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .config-section {
+            margin-bottom: 20px;
+        }
+
+        .config-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .config-section input,
+        .config-section select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .config-section input:focus,
+        .config-section select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+
+        .results-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .download-links {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .download-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .download-link:hover {
+            background: #218838;
+        }
+
+        .visualization {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .pipeline-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .download-links {
+                flex-direction: column;
+            }
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8em;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Word2Vec Processing Pipeline</h1>
+            <p>Transform your text data into meaningful vector representations</p>
+        </div>
+
+        <div class="pipeline-container">
+            <!-- Step 1: Data Upload & Cleaning -->
+            <div class="step-card" id="step1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Data Upload & Cleaning</div>
+                </div>
+                
+                <div class="file-upload">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+                    <label for="fileInput" class="file-upload-label">
+                        📁 Choose Excel File (File_d114.xlsx)
+                    </label>
+                </div>
+                
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <strong>File selected:</strong> <span id="fileName"></span><br>
+                    <strong>Size:</strong> <span id="fileSize"></span>
+                </div>
+                
+                <button class="btn" id="cleanBtn" disabled>🧹 Clean Data</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cleanProgress"></div>
+                </div>
+                <div id="cleanStatus"></div>
+            </div>
+
+            <!-- Step 2: Data Sorting -->
+            <div class="step-card" id="step2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Data Sorting</div>
+                </div>
+                
+                <div class="config-section">
+                    <label for="sortOrder">Sort Order:</label>
+                    <select id="sortOrder">
+                        <option value="desc">Highest Count First</option>
+                        <option value="asc">Lowest Count First</option>
+                    </select>
+                </div>
+                
+                <button class="btn" id="sortBtn" disabled>📊 Sort Data</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="sortProgress"></div>
+                </div>
+                <div id="sortStatus"></div>
+            </div>
+
+            <!-- Step 3: Deduplication -->
+            <div class="step-card" id="step3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Deduplication</div>
+                </div>
+                
+                <div class="config-section">
+                    <label for="caseHandling">Case Handling:</label>
+                    <select id="caseHandling">
+                        <option value="lower">Convert to Lowercase</option>
+                        <option value="upper">Convert to Uppercase</option>
+                        <option value="preserve">Preserve Original Case</option>
+                    </select>
+                </div>
+                
+                <button class="btn" id="dedupeBtn" disabled>🔄 Remove Duplicates</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="dedupeProgress"></div>
+                </div>
+                <div id="dedupeStatus"></div>
+            </div>
+
+            <!-- Step 4: Word2Vec Training -->
+            <div class="step-card" id="step4">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Word2Vec Training</div>
+                </div>
+                
+                <div class="config-section">
+                    <label for="vectorSize" class="tooltip">Vector Size:
+                        <span class="tooltiptext">Dimensionality of word vectors (default: 300)</span>
+                    </label>
+                    <input type="number" id="vectorSize" value="300" min="50" max="1000" step="50" />
+                </div>
+                
+                <div class="config-section">
+                    <label for="windowSize" class="tooltip">Window Size:
+                        <span class="tooltiptext">Maximum distance between current and predicted word (default: 4)</span>
+                    </label>
+                    <input type="number" id="windowSize" value="4" min="1" max="10" />
+                </div>
+                
+                <div class="config-section">
+                    <label for="minCount" class="tooltip">Min Count:
+                        <span class="tooltiptext">Minimum word frequency threshold (default: 1)</span>
+                    </label>
+                    <input type="number" id="minCount" value="1" min="1" max="10" />
+                </div>
+                
+                <button class="btn" id="trainBtn" disabled>🤖 Train Word2Vec Model</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="trainProgress"></div>
+                </div>
+                <div id="trainStatus"></div>
+            </div>
+
+            <!-- Step 5: Export & Download -->
+            <div class="step-card" id="step5">
+                <div class="step-header">
+                    <div class="step-number">5</div>
+                    <div class="step-title">Export & Download</div>
+                </div>
+                
+                <div class="config-section">
+                    <label for="exportFormat">Export Format:</label>
+                    <select id="exportFormat">
+                        <option value="emb">Word2Vec (.emb)</option>
+                        <option value="txt">Text List (.txt)</option>
+                        <option value="xlsx">Excel (.xlsx)</option>
+                    </select>
+                </div>
+                
+                <button class="btn" id="exportBtn" disabled>📥 Generate Exports</button>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="exportProgress"></div>
+                </div>
+                <div id="exportStatus"></div>
+            </div>
+
+            <!-- Step 6: Visualization -->
+            <div class="step-card" id="step6">
+                <div class="step-header">
+                    <div class="step-number">6</div>
+                    <div class="step-title">Visualization</div>
+                </div>
+                
+                <div class="visualization">
+                    <h4>📈 Processing Statistics</h4>
+                    <div id="statsDisplay">
+                        <p>Total Words: <span id="totalWords">0</span></p>
+                        <p>Unique Words: <span id="uniqueWords">0</span></p>
+                        <p>Vector Dimensions: <span id="vectorDims">0</span></p>
+                        <p>Training Time: <span id="trainingTime">0s</span></p>
+                    </div>
+                </div>
+                
+                <button class="btn" id="visualizeBtn" disabled>🎨 Generate Visualizations</button>
+                <div id="visualizationContainer"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">📊 Processing Results</div>
+            <div class="download-links" id="downloadLinks"></div>
+            <div class="visualization" id="finalVisualization"></div>
+        </div>
+    </div>
+
+    <script>
+        class Word2VecPipeline {
+            constructor() {
+                this.currentStep = 1;
+                this.data = null;
+                this.processedData = {};
+                this.model = null;
+                this.stats = {
+                    totalWords: 0,
+                    uniqueWords: 0,
+                    vectorDims: 0,
+                    trainingTime: 0
+                };
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                // File input
+                document.getElementById('fileInput').addEventListener('change', (e) => {
+                    this.handleFileUpload(e);
+                });
+
+                // Button listeners
+                document.getElementById('cleanBtn').addEventListener('click', () => {
+                    this.cleanData();
+                });
+
+                document.getElementById('sortBtn').addEventListener('click', () => {
+                    this.sortData();
+                });
+
+                document.getElementById('dedupeBtn').addEventListener('click', () => {
+                    this.deduplicateData();
+                });
+
+                document.getElementById('trainBtn').addEventListener('click', () => {
+                    this.trainWord2Vec();
+                });
+
+                document.getElementById('exportBtn').addEventListener('click', () => {
+                    this.exportData();
+                });
+
+                document.getElementById('visualizeBtn').addEventListener('click', () => {
+                    this.generateVisualization();
+                });
+            }
+
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const fileInfo = document.getElementById('fileInfo');
+                    const fileName = document.getElementById('fileName');
+                    const fileSize = document.getElementById('fileSize');
+                    
+                    fileName.textContent = file.name;
+                    fileSize.textContent = this.formatFileSize(file.size);
+                    fileInfo.style.display = 'block';
+                    
+                    // Enable clean button
+                    document.getElementById('cleanBtn').disabled = false;
+                    this.activateStep(1);
+                    
+                    // Simulate file reading
+                    this.simulateFileReading(file);
+                }
+            }
+
+            simulateFileReading(file) {
+                // In a real implementation, you would use FileReader API
+                // For demo purposes, we'll simulate with sample data
+                this.data = this.generateSampleData();
+                this.updateStats();
+            }
+
+            generateSampleData() {
+                const samplePhrases = [
+                    'artificial intelligence', 'machine learning', 'deep learning',
+                    'neural networks', 'natural language processing', 'computer vision',
+                    'data science', 'big data', 'python programming', 'javascript',
+                    'web development', 'mobile development', 'cloud computing',
+                    'blockchain technology', 'cybersecurity', 'software engineering'
+                ];
+                
+                return samplePhrases.map(phrase => ({
+                    text: phrase,
+                    count: Math.floor(Math.random() * 100) + 1
+                }));
+            }
+
+            cleanData() {
+                this.showProgress('cleanProgress', 0);
+                this.showStatus('cleanStatus', 'Cleaning data...', 'info');
+                
+                // Simulate cleaning process
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    this.showProgress('cleanProgress', progress);
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        this.processedData.cleaned = this.data.filter(item => 
+                            item.text && typeof item.text === 'string'
+                        );
+                        this.showStatus('cleanStatus', 'Data cleaned successfully!', 'success');
+                        this.enableNextStep(2);
+                    }
+                }, 100);
+            }
+
+            sortData() {
+                const sortOrder = document.getElementById('sortOrder').value;
+                this.showProgress('sortProgress', 0);
+                this.showStatus('sortStatus', 'Sorting data...', 'info');
+                
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 20;
+                    this.showProgress('sortProgress', progress);
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        this.processedData.sorted = [...this.processedData.cleaned].sort((a, b) => {
+                            return sortOrder === 'desc' ? b.count - a.count : a.count - b.count;
+                        });
+                        this.showStatus('sortStatus', 'Data sorted successfully!', 'success');
+                        this.enableNextStep(3);
+                    }
+                }, 100);
+            }
+
+            deduplicateData() {
+                const caseHandling = document.getElementById('caseHandling').value;
+                this.showProgress('dedupeProgress', 0);
+                this.showStatus('dedupeStatus', 'Removing duplicates...', 'info');
+                
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 25;
+                    this.showProgress('dedupeProgress', progress);
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        const seen = new Set();
+                        this.processedData.deduplicated = this.processedData.sorted.filter(item => {
+                            let text = item.text;
+                            if (caseHandling === 'lower') text = text.toLowerCase();
+                            if (caseHandling === 'upper') text = text.toUpperCase();
+                            
+                            if (seen.has(text)) return false;
+                            seen.add(text);
+                            return true;
+                        });
+                        this.showStatus('dedupeStatus', 'Duplicates removed successfully!', 'success');
+                        this.enableNextStep(4);
+                    }
+                }, 100);
+            }
+
+            trainWord2Vec() {
+                const vectorSize = parseInt(document.getElementById('vectorSize').value);
+                const windowSize = parseInt(document.getElementById('windowSize').value);
+                const minCount = parseInt(document.getElementById('minCount').value);
+                
+                this.showProgress('trainProgress', 0);
+                this.showStatus('trainStatus', 'Training Word2Vec model...', 'info');
+                
+                const startTime = Date.now();
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    this.showProgress('trainProgress', progress);
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        const endTime = Date.now();
+                        this.stats.trainingTime = ((endTime - startTime) / 1000).toFixed(2);
+                        this.stats.vectorDims = vectorSize;
+                        
+                        this.model = {
+                            vectorSize,
+                            windowSize,
+                            minCount,
+                            vectors: this.generateMockVectors()
+                        };
+                        
+                        this.showStatus('trainStatus', 'Word2Vec model trained successfully!', 'success');
+                        this.updateStats();
+                        this.enableNextStep(5);
+                    }
+                }, 200);
+            }
+
+            generateMockVectors() {
+                const vectors = {};
+                this.processedData.deduplicated.forEach(item => {
+                    const key = item.text.replace(/\s+/g, '_').toLowerCase();
+                    vectors[key] = Array.from({length: this.model.vectorSize}, () => 
+                        (Math.random() - 0.5) * 2
+                    );
+                });
+                return vectors;
+            }
+
+            exportData() {
+                const format = document.getElementById('exportFormat').value;
+                this.showProgress('exportProgress', 0);
+                this.showStatus('exportStatus', 'Generating exports...', 'info');
+                
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 12.5;
+                    this.showProgress('exportProgress', progress);
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        this.generateDownloadLinks();
+                        this.showStatus('exportStatus', 'Exports generated successfully!', 'success');
+                        this.enableNextStep(6);
+                        document.getElementById('resultsSection').style.display = 'block';
+                    }
+                }, 150);
+            }
+
+            generateDownloadLinks() {
+                const downloadLinks = document.getElementById('downloadLinks');
+                downloadLinks.innerHTML = '';
+                
+                const links = [
+                    { name: 'AI_Vector.emb', desc: 'Word2Vec Embeddings' },
+                    { name: 'File.txt', desc: 'Processed Word List' },
+                    { name: 'ai_file_a.xlsx', desc: 'Final Excel Data' }
+                ];
+                
+                links.forEach(link => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'download-link';
+                    a.textContent = `📥 ${link.name}`;
+                    a.title = link.desc;
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.downloadFile(link.name);
+                    });
+                    downloadLinks.appendChild(a);
+                });
+            }
+
+            downloadFile(filename) {
+                // In a real implementation, this would generate and download actual files
+                alert(`Downloading ${filename}...`);
+            }
+
+            generateVisualization() {
+                const container = document.getElementById('visualizationContainer');
+                container.innerHTML = `
+                    <div style="margin-top: 20px;">
+                        <h4>📊 Word Frequency Distribution</h4>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                            <div style="height: 200px; display: flex; align-items: end; gap: 5px; justify-content: center;">
+                                ${this.generateMockChart()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            generateMockChart() {
+                const bars = [];
+                for (let i = 0; i < 8; i++) {
+                    const height = Math.random() * 150 + 30;
+                    bars.push(`
+                        <div style="
+                            width: 20px; 
+                            height: ${height}px; 
+                            background: linear-gradient(to top, #667eea, #764ba2);
+                            border-radius: 2px;
+                            margin: 0 2px;
+                        "></div>
+                    `);
+                }
+                return bars.join('');
+            }
+
+            updateStats() {
+                if (this.data) {
+                    this.stats.totalWords = this.data.reduce((sum, item) => sum + item.count, 0);
+                    this.stats.uniqueWords = this.data.length;
+                }
+                
+                document.getElementById('totalWords').textContent = this.stats.totalWords;
+                document.getElementById('uniqueWords').textContent = this.stats.uniqueWords;
+                document.getElementById('vectorDims').textContent = this.stats.vectorDims;
+                document.getElementById('trainingTime').textContent = this.stats.trainingTime + 's';
+            }
+
+            showProgress(elementId, percentage) {
+                document.getElementById(elementId).style.width = percentage + '%';
+            }
+
+            showStatus(elementId, message, type) {
+                const element = document.getElementById(elementId);
+                element.textContent = message;
+                element.className = `status-message status-${type}`;
+                element.style.display = 'block';
+            }
+
+            activateStep(stepNumber) {
+                document.querySelectorAll('.step-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                document.getElementById(`step${stepNumber}`).classList.add('active');
+            }
+
+            enableNextStep(stepNumber) {
+                this.activateStep(stepNumber);
+                const buttonMap = {
+                    2: 'sortBtn',
+                    3: 'dedupeBtn',
+                    4: 'trainBtn',
+                    5: 'exportBtn',
+                    6: 'visualizeBtn'
+                };
+                
+                if (buttonMap[stepNumber]) {
+                    document.getElementById(buttonMap[stepNumber]).disabled = false;
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // Initialize the pipeline when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new Word2VecPipeline();
+        });
+    </script>
+</body>
+</html>
