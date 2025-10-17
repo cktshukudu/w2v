@@ -196,3 +196,4 @@ def download_papers(papers, download_dir, max_downloads=500):
             continue
     
     return downloaded
+
