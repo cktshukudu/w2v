@@ -13,3 +13,4 @@ spacy==3.8.7
 blis>=0.7.11 --only-binary=:all:
 pillow>=10.4.0
 python-multipart==0.0.6
+gunicorn
