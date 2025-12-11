@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualize - Word2Vec Analysis Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <style>
+        .visualization-section {
+            margin-bottom: 3rem;
+        }
+        .card {
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid rgba(0, 0, 0, 0.125);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: none;
+            font-weight: 600;
+        }
+        .card-header.bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+        #heatmapPreview {
+            max-width: 100%;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        #heatmapPreview:hover {
+            transform: scale(1.02);
+        }
+        .category-words {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .word-count {
+            font-size: 0.75rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .heatmap-container {
+            position: relative;
+            overflow: auto;
+            max-width: 100%;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            background: white;
+            padding: 1.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.05);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            transition: transform 0.2s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        .btn-group-sm .btn {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+        }
+        .similarity-cell {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+            min-width: 80px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .similarity-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+        .tooltip-inner {
+            max-width: 300px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-size: 0.875rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .heatmap-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 2px;
+        }
+        .heatmap-table th {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem;
+            text-align: center;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .heatmap-table th.axis-header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            font-weight: 700;
+        }
+        .controls-panel {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .form-control, .form-select {
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn {
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0.5rem 1rem rgba(102, 126, 234, 0.3);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+        }
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0.5rem 1rem rgba(40, 167, 69, 0.3);
+        }
+        .alert {
+            border-radius: 0.5rem;
+            border: none;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            border-radius: 0.5rem;
+        }
+        .legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0 1rem;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 0.5rem;
+        }
+        .zoom-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+        }
+        .heatmap-title {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        .matrix-info {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .word-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 0.25rem;
+            margin: 0.25rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .selection-badge {
+            margin: 2px;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .selection-summary {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        .category-select-container {
+            margin-bottom: 1rem;
+        }
+        .select2-container--bootstrap-5 .select2-selection {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            min-height: 38px;
+        }
+        .comparison-type {
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .comparison-type h6 {
+            margin-bottom: 1rem;
+            color: #495057;
+        }
+        .comparison-badge {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.25rem;
+        }
+        .comparison-badge:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+        .comparison-badge.active {
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.5);
+        }
+        .quick-preset {
+            background: #f0f7ff;
+            border: 2px dashed #3498db;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .quick-preset:hover {
+            background: #e1f0ff;
+            transform: translateY(-2px);
+        }
+        .matrix-dimensions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .dimension-display {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #e67e22;
+        }
+        .configuration-panel {
+            border: 2px solid #667eea;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: #f8f9fa;
+        }
+        .panel-header {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-brain me-2"></i>Word2Vec Analysis Tool
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('projects') }}">
+                    <i class="fas fa-folder me-1"></i>Projects
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user me-1"></i>Profile
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('literature_search') }}">
+                    <i class="fas fa-search me-1"></i>Literature
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-th me-2"></i>Flexible Multi-Category Heatmap Visualization
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead mb-0 text-muted">
+                            Create flexible heatmaps with multiple categories on each axis. Compare one-to-many, many-to-one, or many-to-many relationships.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bolt me-2"></i>Quick Setup Presets
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="quick-preset" onclick="applyPreset('one_to_many')">
+                                    <h6><i class="fas fa-arrow-right me-2"></i>One-to-Many</h6>
+                                    <p class="mb-0 text-muted small">Compare one category against multiple categories</p>
+                                    <span class="badge bg-info">1 vs N</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="quick-preset" onclick="applyPreset('many_to_one')">
+                                    <h6><i class="fas fa-arrow-left me-2"></i>Many-to-One</h6>
+                                    <p class="mb-0 text-muted small">Compare multiple categories against one category</p>
+                                    <span class="badge bg-info">N vs 1</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="quick-preset" onclick="applyPreset('many_to_many')">
+                                    <h6><i class="fas fa-arrows-alt-h me-2"></i>Many-to-Many</h6>
+                                    <p class="mb-0 text-muted small">Compare multiple categories on both axes</p>
+                                    <span class="badge bg-info">N vs M</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load Data Section -->
+        <div class="row visualization-section">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-upload me-2"></i>Step 1: Load Data
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="emb_file_viz" class="form-label">Word Embeddings File (.emb)</label>
+                                    <input class="form-control" type="file" id="emb_file_viz" accept=".emb">
+                                    <div class="form-text">
+                                        Upload your trained word vectors file.
+                                    </div>
+                                </div>
+                                <button id="loadEmbeddingsViz" class="btn btn-primary">
+                                    <i class="fas fa-spinner fa-spin d-none me-2"></i>
+                                    Load Embeddings
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="csv_file" class="form-label">Categories File (CSV)</label>
+                                    <input class="form-control" type="file" id="csv_file" accept=".csv">
+                                    <div class="form-text">
+                                        Upload a CSV file with categories and their words.
+                                    </div>
+                                </div>
+                                <button id="loadCategories" class="btn btn-primary">
+                                    <i class="fas fa-spinner fa-spin d-none me-2"></i>
+                                    Load Categories
+                                </button>
+                            </div>
+                        </div>
+                        <div id="dataStatus" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flexible Configuration Section -->
+        <div class="row visualization-section">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>Step 2: Flexible Configuration
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="configuration-panel">
+                            <div class="panel-header">
+                                <i class="fas fa-arrows-alt-h me-2"></i>Category Selection
+                            </div>
+                            
+                            <div class="row">
+                                <!-- X-Axis Configuration -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">X-Axis Categories</label>
+                                        <select id="category_x_multiple" class="form-select" multiple style="width: 100%;">
+                                            <option value="">Select categories...</option>
+                                        </select>
+                                        <div class="form-text">
+                                            Select one or more categories for the X-axis.
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Word Limit per Category (X)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="max_words_per_category_x" value="5" min="1" max="20">
+                                            <span class="input-group-text">words</span>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="previewSelectedWords('x')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="random_words_x" checked>
+                                            <label class="form-check-label" for="random_words_x">
+                                                Random word selection
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Y-Axis Configuration -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Y-Axis Categories</label>
+                                        <select id="category_y_multiple" class="form-select" multiple style="width: 100%;">
+                                            <option value="">Select categories...</option>
+                                        </select>
+                                        <div class="form-text">
+                                            Select one or more categories for the Y-axis.
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Word Limit per Category (Y)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="max_words_per_category_y" value="5" min="1" max="20">
+                                            <span class="input-group-text">words</span>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="previewSelectedWords('y')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="random_words_y" checked>
+                                            <label class="form-check-label" for="random_words_y">
+                                                Random word selection
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Selection Summary -->
+                            <div id="selectionSummary" class="selection-summary d-none">
+                                <h6><i class="fas fa-list-check me-2"></i>Selection Summary</h6>
+                                <div id="summaryContent"></div>
+                            </div>
+                            
+                            <!-- Matrix Dimensions -->
+                            <div id="matrixDimensions" class="matrix-dimensions d-none">
+                                <div class="dimension-display">
+                                    Matrix: <span id="xDimension">0</span> × <span id="yDimension">0</span> words
+                                </div>
+                                <small class="text-muted">Total comparisons: <span id="totalComparisons">0</span></small>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Options -->
+                        <div class="controls-panel mt-3">
+                            <div class="panel-header">
+                                <i class="fas fa-cogs me-2"></i>Advanced Options
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="normalize" checked>
+                                        <label class="form-check-label" for="normalize">
+                                            Normalize scores (0-1 range)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="show_values" checked>
+                                        <label class="form-check-label" for="show_values">
+                                            Show similarity values
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="color_blind" checked>
+                                        <label class="form-check-label" for="color_blind">
+                                            Color-blind friendly
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include_category_labels" checked>
+                                        <label class="form-check-label" for="include_category_labels">
+                                            Include category labels
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="group_by_category" checked>
+                                        <label class="form-check-label" for="group_by_category">
+                                            Group words by category
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="similarity_threshold" class="form-label">Similarity Threshold</label>
+                                        <input type="range" class="form-range" id="similarity_threshold" min="0" max="1" step="0.05" value="0.3">
+                                        <div class="d-flex justify-content-between">
+                                            <small>0.0</small>
+                                            <small>Threshold: <span id="thresholdValue">0.30</span></small>
+                                            <small>1.0</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Selected Words Preview -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-list me-2"></i>X-Axis Words Preview
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="xWordsPreview" class="category-words">
+                                            <p class="text-muted mb-0">Select categories to preview words</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-list me-2"></i>Y-Axis Words Preview
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="yWordsPreview" class="category-words">
+                                            <p class="text-muted mb-0">Select categories to preview words</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generate & Save Section -->
+        <div class="row visualization-section">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-magic me-2"></i>Step 3: Generate & Save
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="heatmap_name" class="form-label">Heatmap Name</label>
+                                    <input type="text" class="form-control" id="heatmap_name" 
+                                           placeholder="Enter a descriptive name for this heatmap">
+                                </div>
+                                <button id="generateHeatmap" class="btn btn-success btn-lg" disabled>
+                                    <i class="fas fa-spinner fa-spin d-none me-2"></i>
+                                    <i class="fas fa-fire me-2"></i>Generate Flexible Heatmap
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="save_project" class="form-label">Save to Project</label>
+                                    <select class="form-select" id="save_project">
+                                        <option value="">Select a project</option>
+                                    </select>
+                                </div>
+                                <div class="btn-group w-100">
+                                    <button id="saveHeatmap" class="btn btn-primary" disabled>
+                                        <i class="fas fa-save me-1"></i>Save to Project
+                                    </button>
+                                    <button id="downloadHeatmap" class="btn btn-outline-primary" disabled>
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </button>
+                                    <button id="exportConfig" class="btn btn-outline-success" disabled>
+                                        <i class="fas fa-file-export me-1"></i>Export Config
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmap Visualization -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-heat me-2"></i>Professional Heatmap Visualization
+                        </h5>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" onclick="zoomHeatmap(0.8)" title="Zoom Out">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="zoomHeatmap(1.2)" title="Zoom In">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="resetHeatmapZoom()" title="Reset Zoom">
+                                <i class="fas fa-expand-arrows-alt"></i>
+                            </button>
+                            <button class="btn btn-outline-info" onclick="toggleCategoryLabels()" title="Toggle Labels">
+                                <i class="fas fa-tags"></i>
+                            </button>
+                            <button class="btn btn-outline-info" onclick="toggleGrouping()" title="Toggle Grouping">
+                                <i class="fas fa-layer-group"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body position-relative">
+                        <div id="loadingOverlay" class="loading-overlay d-none">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h5>Generating Flexible Heatmap...</h5>
+                                <p class="text-muted" id="loadingMessage">Processing multiple categories...</p>
+                            </div>
+                        </div>
+                        <div id="heatmapContainer" class="text-center">
+                            <p class="text-muted">Configure and generate a heatmap to see the professional visualization here</p>
+                        </div>
+                        <div id="heatmapStats" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Heatmap Table -->
+        <div class="row mt-4 d-none" id="interactiveHeatmapSection">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2"></i>Interactive Matrix Table
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="matrix-info">
+                            <h6 class="mb-0" id="matrixTitle">Similarity Matrix</h6>
+                        </div>
+                        <div class="heatmap-container">
+                            <div id="interactiveHeatmap"></div>
+                        </div>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: rgb(240, 240, 255);"></div>
+                                <span>Low Similarity (0.0)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: rgb(102, 126, 234);"></div>
+                                <span>Medium Similarity (0.5)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: rgb(44, 62, 80);"></div>
+                                <span>High Similarity (1.0)</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <button class="btn btn-outline-primary btn-sm" onclick="downloadMatrixCSV()">
+                                <i class="fas fa-download me-1"></i>Download Matrix CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        let currentWordVectors = {};
+        let currentCategories = {};
+        let currentHeatmapData = null;
+        let currentZoom = 1.0;
+        let currentConfig = {};
+
+        // Initialize Select2
+        $(document).ready(function() {
+            $('#category_x_multiple').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select X-axis categories',
+                allowClear: true,
+                closeOnSelect: false
+            });
+            
+            $('#category_y_multiple').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select Y-axis categories',
+                allowClear: true,
+                closeOnSelect: false
+            });
+            
+            // Listen to selection changes
+            $('#category_x_multiple').on('change', function() {
+                updateSelectionSummary();
+                previewSelectedWords('x');
+            });
+            
+            $('#category_y_multiple').on('change', function() {
+                updateSelectionSummary();
+                previewSelectedWords('y');
+            });
+            
+            // Update threshold display
+            $('#similarity_threshold').on('input', function() {
+                $('#thresholdValue').text(parseFloat(this.value).toFixed(2));
+            });
+        });
+
+        // Load embeddings for visualization
+        document.getElementById('loadEmbeddingsViz').addEventListener('click', function() {
+            const fileInput = document.getElementById('emb_file_viz');
+            const file = fileInput.files[0];
+            const button = this;
+            const spinner = button.querySelector('.fa-spinner');
+            
+            if (!file) {
+                showAlert('Please select a .emb file', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('emb_file', file);
+
+            button.disabled = true;
+            spinner.classList.remove('d-none');
+
+            fetch('/analyze/load_embeddings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                } else {
+                    currentWordVectors = data.word_vectors;
+                    showAlert(`Successfully loaded ${data.word_count} word vectors`, 'success');
+                    checkDataReady();
+                }
+            })
+            .catch(error => {
+                showAlert('Error loading embeddings: ' + error, 'danger');
+            })
+            .finally(() => {
+                button.disabled = false;
+                spinner.classList.add('d-none');
+            });
+        });
+
+        // Load categories
+        document.getElementById('loadCategories').addEventListener('click', function() {
+            const fileInput = document.getElementById('csv_file');
+            const file = fileInput.files[0];
+            const button = this;
+            const spinner = button.querySelector('.fa-spinner');
+            
+            if (!file) {
+                showAlert('Please select a CSV file', 'warning');
+                return;
+            }
+
+            const reader = new FileReader();
+            
+            button.disabled = true;
+            spinner.classList.remove('d-none');
+
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    const lines = content.split('\n');
+                    const categories = {};
+                    
+                    lines.forEach(line => {
+                        const parts = line.split(',').map(p => p.trim()).filter(p => p);
+                        if (parts.length > 1) {
+                            const category = parts[0];
+                            const words = parts.slice(1).filter(word => word && word.toLowerCase() !== 'nan');
+                            if (category && words.length > 0) {
+                                categories[category] = words;
+                            }
+                        }
+                    });
+                    
+                    currentCategories = categories;
+                    populateCategorySelects();
+                    
+                    showAlert(`Successfully loaded ${Object.keys(categories).length} categories`, 'success');
+                    checkDataReady();
+                    
+                } catch (error) {
+                    showAlert('Error parsing CSV: ' + error, 'danger');
+                } finally {
+                    button.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            };
+            
+            reader.readAsText(file);
+        });
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('dataStatus').appendChild(alertDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        function populateCategorySelects() {
+            $('#category_x_multiple').empty().append('<option value="">Select categories...</option>');
+            $('#category_y_multiple').empty().append('<option value="">Select categories...</option>');
+            
+            Object.keys(currentCategories).forEach(category => {
+                const optionX = new Option(category, category);
+                const optionY = new Option(category, category);
+                $('#category_x_multiple').append(optionX);
+                $('#category_y_multiple').append(optionY);
+            });
+            
+            $('#category_x_multiple').trigger('change');
+            $('#category_y_multiple').trigger('change');
+        }
+
+        function updateSelectionSummary() {
+            const selectedX = $('#category_x_multiple').val() || [];
+            const selectedY = $('#category_y_multiple').val() || [];
+            
+            if (selectedX.length === 0 && selectedY.length === 0) {
+                document.getElementById('selectionSummary').classList.add('d-none');
+                document.getElementById('matrixDimensions').classList.add('d-none');
+                return;
+            }
+            
+            document.getElementById('selectionSummary').classList.remove('d-none');
+            document.getElementById('matrixDimensions').classList.remove('d-none');
+            
+            let summaryHTML = '';
+            
+            if (selectedX.length > 0) {
+                summaryHTML += `<div class="mb-2"><strong>X-Axis (${selectedX.length}):</strong> `;
+                summaryHTML += selectedX.map(cat => `<span class="badge bg-primary selection-badge">${cat}</span>`).join(' ');
+                summaryHTML += `</div>`;
+            }
+            
+            if (selectedY.length > 0) {
+                summaryHTML += `<div><strong>Y-Axis (${selectedY.length}):</strong> `;
+                summaryHTML += selectedY.map(cat => `<span class="badge bg-success selection-badge">${cat}</span>`).join(' ');
+                summaryHTML += `</div>`;
+            }
+            
+            document.getElementById('summaryContent').innerHTML = summaryHTML;
+            
+            // Calculate matrix dimensions
+            const wordsPerCategoryX = parseInt(document.getElementById('max_words_per_category_x').value) || 5;
+            const wordsPerCategoryY = parseInt(document.getElementById('max_words_per_category_y').value) || 5;
+            
+            const totalXWords = selectedX.length * Math.min(wordsPerCategoryX, 10);
+            const totalYWords = selectedY.length * Math.min(wordsPerCategoryY, 10);
+            const totalComparisons = totalXWords * totalYWords;
+            
+            document.getElementById('xDimension').textContent = totalXWords;
+            document.getElementById('yDimension').textContent = totalYWords;
+            document.getElementById('totalComparisons').textContent = totalComparisons.toLocaleString();
+        }
+
+        function previewSelectedWords(axis) {
+            const selectElement = $(`#category_${axis}_multiple`);
+            const selectedCategories = selectElement.val() || [];
+            const wordsPerCategory = parseInt(document.getElementById(`max_words_per_category_${axis}`).value) || 5;
+            const randomSelection = document.getElementById(`random_words_${axis}`).checked;
+            
+            const previewDiv = document.getElementById(`${axis}WordsPreview`);
+            
+            if (selectedCategories.length === 0) {
+                previewDiv.innerHTML = '<p class="text-muted mb-0">Select categories to preview words</p>';
+                return;
+            }
+            
+            let previewHTML = `<div class="mb-2"><strong>Total words: ${selectedCategories.length * Math.min(wordsPerCategory, 10)}</strong></div>`;
+            
+            selectedCategories.forEach(category => {
+                if (currentCategories[category]) {
+                    let words = [...currentCategories[category]];
+                    
+                    // Apply random selection if enabled
+                    if (randomSelection) {
+                        words = shuffleArray(words);
+                    }
+                    
+                    // Take limited number of words
+                    const displayWords = words.slice(0, Math.min(wordsPerCategory, 10));
+                    
+                    previewHTML += `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-primary">${category}</strong>
+                                <small class="word-count">${displayWords.length} of ${words.length}</small>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                ${displayWords.map(word => `<span class="word-label">${word}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            previewDiv.innerHTML = previewHTML;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function applyPreset(presetType) {
+            const categories = Object.keys(currentCategories);
+            if (categories.length === 0) {
+                showAlert('Please load categories first', 'warning');
+                return;
+            }
+            
+            switch(presetType) {
+                case 'one_to_many':
+                    // Select first category for X, next 3 for Y
+                    $('#category_x_multiple').val([categories[0]]).trigger('change');
+                    $('#category_y_multiple').val(categories.slice(1, 4)).trigger('change');
+                    break;
+                case 'many_to_one':
+                    // Select first 3 categories for X, first category for Y
+                    $('#category_x_multiple').val(categories.slice(0, 3)).trigger('change');
+                    $('#category_y_multiple').val([categories[0]]).trigger('change');
+                    break;
+                case 'many_to_many':
+                    // Select first 3 categories for both axes
+                    $('#category_x_multiple').val(categories.slice(0, 3)).trigger('change');
+                    $('#category_y_multiple').val(categories.slice(3, 6)).trigger('change');
+                    break;
+            }
+            
+            showAlert(`Applied ${presetType.replace('_', '-')} preset`, 'info');
+        }
+
+        function checkDataReady() {
+            const hasEmbeddings = Object.keys(currentWordVectors).length > 0;
+            const hasCategories = Object.keys(currentCategories).length > 0;
+            
+            if (hasEmbeddings && hasCategories) {
+                document.getElementById('generateHeatmap').disabled = false;
+                loadUserProjects();
+            }
+        }
+
+        function loadUserProjects() {
+            const projectSelect = document.getElementById('save_project');
+            
+            // Clear existing options except the first one
+            while (projectSelect.options.length > 1) projectSelect.remove(1);
+            
+            // Add some example projects (in real app, fetch from server)
+            const projects = ['Research Project 1', 'Analysis Project', 'Test Project'];
+            projects.forEach(project => {
+                const option = new Option(project, project);
+                projectSelect.add(option);
+            });
+        }
+
+        // Generate heatmap with multiple categories
+        document.getElementById('generateHeatmap').addEventListener('click', function() {
+            const selectedX = $('#category_x_multiple').val() || [];
+            const selectedY = $('#category_y_multiple').val() || [];
+            const wordsPerCategoryX = parseInt(document.getElementById('max_words_per_category_x').value) || 5;
+            const wordsPerCategoryY = parseInt(document.getElementById('max_words_per_category_y').value) || 5;
+            const randomX = document.getElementById('random_words_x').checked;
+            const randomY = document.getElementById('random_words_y').checked;
+            const normalize = document.getElementById('normalize').checked;
+            const button = this;
+            
+            if (selectedX.length === 0 || selectedY.length === 0) {
+                showAlert('Please select at least one category for each axis', 'warning');
+                return;
+            }
+
+            if (selectedX.length * selectedY.length > 100) {
+                showAlert('Too many category combinations. Please limit to 100 total comparisons.', 'warning');
+                return;
+            }
+
+            // Show loading overlay with custom message
+            document.getElementById('loadingOverlay').classList.remove('d-none');
+            document.getElementById('loadingMessage').textContent = 
+                `Processing ${selectedX.length} × ${selectedY.length} categories...`;
+            button.disabled = true;
+
+            // Prepare categories with limited words
+            const limitedCategories = {};
+            
+            // Process X-axis categories
+            selectedX.forEach(category => {
+                if (currentCategories[category]) {
+                    let words = [...currentCategories[category]];
+                    if (randomX) words = shuffleArray(words);
+                    limitedCategories[category] = words.slice(0, Math.min(wordsPerCategoryX, 20));
+                }
+            });
+            
+            // Process Y-axis categories
+            selectedY.forEach(category => {
+                if (currentCategories[category] && !limitedCategories[category]) {
+                    let words = [...currentCategories[category]];
+                    if (randomY) words = shuffleArray(words);
+                    limitedCategories[category] = words.slice(0, Math.min(wordsPerCategoryY, 20));
+                }
+            });
+
+            // Store configuration
+            currentConfig = {
+                selectedX: selectedX,
+                selectedY: selectedY,
+                wordsPerCategoryX: wordsPerCategoryX,
+                wordsPerCategoryY: wordsPerCategoryY,
+                randomX: randomX,
+                randomY: randomY,
+                normalize: normalize
+            };
+
+            // Prepare request data
+            const requestData = {
+                categories: limitedCategories,
+                category_selection: {
+                    x_axis: selectedX,
+                    y_axis: selectedY
+                },
+                word_vectors: currentWordVectors,
+                normalize: normalize
+            };
+
+            fetch('/heatmap/generate_multi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert('Error: ' + data.error, 'danger');
+                } else {
+                    currentHeatmapData = data;
+                    displayHeatmap(data);
+                    createInteractiveHeatmap(data);
+                    document.getElementById('saveHeatmap').disabled = false;
+                    document.getElementById('downloadHeatmap').disabled = false;
+                    document.getElementById('exportConfig').disabled = false;
+                    showAlert('Multi-category heatmap generated successfully!', 'success');
+                }
+            })
+            .catch(error => {
+                showAlert('Error generating heatmap: ' + error, 'danger');
+            })
+            .finally(() => {
+                document.getElementById('loadingOverlay').classList.add('d-none');
+                button.disabled = false;
+            });
+        });
+
+        function displayHeatmap(data) {
+            const container = document.getElementById('heatmapContainer');
+            const statsDiv = document.getElementById('heatmapStats');
+            
+            // Display image with professional styling
+            container.innerHTML = `
+                <div class="heatmap-title">
+                    Multi-Category Semantic Similarity
+                </div>
+                <div class="position-relative d-inline-block">
+                    <img src="${data.image_preview}" alt="Professional Heatmap" id="heatmapPreview" 
+                         class="img-fluid" style="transform: scale(${currentZoom}); transition: transform 0.3s ease;">
+                </div>
+            `;
+            
+            // Display enhanced statistics
+            statsDiv.innerHTML = `
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title"><i class="fas fa-arrow-down me-2"></i>Min Similarity</h6>
+                                <h3 class="mb-0">${data.stats.min.toFixed(4)}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title"><i class="fas fa-arrow-up me-2"></i>Max Similarity</h6>
+                                <h3 class="mb-0">${data.stats.max.toFixed(4)}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title"><i class="fas fa-calculator me-2"></i>Mean</h6>
+                                <h3 class="mb-0">${data.stats.mean.toFixed(4)}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title"><i class="fas fa-chart-line me-2"></i>Std Dev</h6>
+                                <h3 class="mb-0">${data.stats.std.toFixed(4)}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6><i class="fas fa-info-circle me-2"></i>Heatmap Information</h6>
+                                <ul class="mb-0">
+                                    <li>X-axis categories: ${data.category_x_info?.length || 1}</li>
+                                    <li>Y-axis categories: ${data.category_y_info?.length || 1}</li>
+                                    <li>Total words compared: ${data.words_x?.length || 0} × ${data.words_y?.length || 0}</li>
+                                    <li>Matrix dimensions: ${data.words_x?.length || 0} × ${data.words_y?.length || 0}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createInteractiveHeatmap(data) {
+            const container = document.getElementById('interactiveHeatmap');
+            const section = document.getElementById('interactiveHeatmapSection');
+            const matrixTitle = document.getElementById('matrixTitle');
+            
+            section.classList.remove('d-none');
+            matrixTitle.textContent = `Similarity Matrix: ${data.words_x.length} words × ${data.words_y.length} words`;
+            
+            const wordsX = data.words_x;
+            const wordsY = data.words_y;
+            const matrix = data.matrix;
+            const colorBlind = document.getElementById('color_blind').checked;
+            const threshold = parseFloat(document.getElementById('similarity_threshold').value);
+            const includeLabels = document.getElementById('include_category_labels').checked;
+            const groupByCategory = document.getElementById('group_by_category').checked;
+            
+            let tableHTML = `
+                <table class="table heatmap-table">
+                    <thead>
+                        <tr>
+                            <th class="axis-header" style="min-width: 120px;">Words</th>
+            `;
+            
+            // X-axis headers with optional category grouping
+            wordsY.forEach((word, index) => {
+                let title = word;
+                if (includeLabels && data.category_labels_y && data.category_labels_y[index]) {
+                    title = `${data.category_labels_y[index]}: ${word}`;
+                }
+                
+                tableHTML += `
+                    <th class="text-center" style="min-width: 80px; max-width: 120px; transform: rotate(-45deg); transform-origin: left bottom; height: 120px; white-space: nowrap;" title="${title}">
+                        <div style="transform: rotate(45deg); transform-origin: center; width: 100%;">
+                            ${includeLabels && data.category_labels_y && data.category_labels_y[index] ? 
+                              `<small class="d-block" style="color: #e74c3c; font-weight: bold;">${data.category_labels_y[index]}</small>` : ''}
+                            ${word}
+                        </div>
+                    </th>
+                `;
+            });
+            
+            tableHTML += `</tr></thead><tbody>`;
+            
+            // Table rows with enhanced styling and grouping
+            wordsX.forEach((wordX, i) => {
+                let xLabel = '';
+                if (includeLabels && data.category_labels_x && data.category_labels_x[i]) {
+                    xLabel = `<small class="d-block" style="color: #e74c3c; font-weight: bold;">${data.category_labels_x[i]}</small>`;
+                }
+                
+                tableHTML += `
+                    <tr>
+                        <td class="axis-header" style="font-weight: 700; min-width: 120px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" 
+                            title="${includeLabels && data.category_labels_x && data.category_labels_x[i] ? data.category_labels_x[i] + ': ' : ''}${wordX}">
+                            ${xLabel}
+                            ${wordX}
+                        </td>
+                `;
+                
+                wordsY.forEach((wordY, j) => {
+                    const similarity = matrix[i][j];
+                    const color = getColorForSimilarity(similarity, data.stats, colorBlind);
+                    const textColor = similarity > 0.5 ? 'white' : 'black';
+                    const fontSize = similarity > 0.7 ? '0.9rem' : '0.8rem';
+                    const fontWeight = similarity > 0.7 ? 'bold' : 'normal';
+                    const opacity = similarity >= threshold ? '1' : '0.6';
+                    
+                    let yLabel = '';
+                    if (includeLabels && data.category_labels_y && data.category_labels_y[j]) {
+                        yLabel = data.category_labels_y[j] + ': ';
+                    }
+                    
+                    tableHTML += `
+                        <td class="similarity-cell text-center" 
+                            style="background-color: ${color}; color: ${textColor}; font-size: ${fontSize}; font-weight: ${fontWeight}; opacity: ${opacity};"
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="<strong>${data.category_labels_x ? data.category_labels_x[i] + ': ' : ''}${wordX}</strong><br>
+                                   <strong>${yLabel}${wordY}</strong><br>
+                                   Similarity: <strong>${similarity.toFixed(4)}</strong>">
+                            ${document.getElementById('show_values').checked ? similarity.toFixed(2) : ''}
+                        </td>
+                    `;
+                });
+                
+                tableHTML += `</tr>`;
+                
+                // Add separator row between categories if grouping enabled
+                if (groupByCategory && data.category_labels_x && i < wordsX.length - 1 && 
+                    data.category_labels_x[i] !== data.category_labels_x[i + 1]) {
+                    tableHTML += `
+                        <tr>
+                            <td colspan="${wordsY.length + 1}" style="background-color: #f8f9fa; height: 4px;"></td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            tableHTML += `</tbody></table>`;
+            
+            container.innerHTML = tableHTML;
+            
+            // Initialize tooltips with enhanced styling
+            const tooltipTriggerList = [].slice.call(container.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    html: true,
+                    boundary: 'window'
+                });
+            });
+        }
+
+        function getColorForSimilarity(similarity, stats, colorBlind = false) {
+            const normalized = (similarity - stats.min) / (stats.max - stats.min);
+            
+            if (colorBlind) {
+                // Color-blind friendly palette (blue to purple)
+                const hue = 270 - (normalized * 120);
+                const saturation = 80;
+                const lightness = 90 - (normalized * 40);
+                
+                const h = hue / 360;
+                const s = saturation / 100;
+                const l = lightness / 100;
+                
+                let r, g, b;
+                
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                
+                r = Math.round(r * 255);
+                g = Math.round(g * 255);
+                b = Math.round(b * 255);
+                
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                // Professional blue gradient
+                const r = Math.round(240 - (normalized * 140));
+                const g = Math.round(240 - (normalized * 120));
+                const b = Math.round(255 - (normalized * 20));
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        }
+
+        function zoomHeatmap(factor) {
+            currentZoom *= factor;
+            const heatmap = document.getElementById('heatmapPreview');
+            if (heatmap) {
+                heatmap.style.transform = `scale(${currentZoom})`;
+            }
+        }
+
+        function resetHeatmapZoom() {
+            currentZoom = 1.0;
+            const heatmap = document.getElementById('heatmapPreview');
+            if (heatmap) {
+                heatmap.style.transform = 'scale(1)';
+            }
+        }
+
+        function toggleCategoryLabels() {
+            const includeLabels = document.getElementById('include_category_labels');
+            includeLabels.checked = !includeLabels.checked;
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        }
+
+        function toggleGrouping() {
+            const groupByCategory = document.getElementById('group_by_category');
+            groupByCategory.checked = !groupByCategory.checked;
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        }
+
+        // Event listeners for configuration changes
+        document.getElementById('show_values').addEventListener('change', function() {
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        });
+
+        document.getElementById('color_blind').addEventListener('change', function() {
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        });
+
+        document.getElementById('similarity_threshold').addEventListener('input', function() {
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        });
+
+        document.getElementById('include_category_labels').addEventListener('change', function() {
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        });
+
+        document.getElementById('group_by_category').addEventListener('change', function() {
+            if (currentHeatmapData) {
+                createInteractiveHeatmap(currentHeatmapData);
+            }
+        });
+
+        // Save heatmap
+        document.getElementById('saveHeatmap').addEventListener('click', function() {
+            const projectName = document.getElementById('save_project').value;
+            const heatmapName = document.getElementById('heatmap_name').value || 
+                               'Multi-category Heatmap';
+            
+            if (!projectName) {
+                showAlert('Please select a project to save to', 'warning');
+                return;
+            }
+
+            if (!currentHeatmapData) {
+                showAlert('No heatmap data to save', 'warning');
+                return;
+            }
+
+            fetch('/heatmap/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    project_name: projectName,
+                    heatmap_name: heatmapName,
+                    category_x: currentConfig.selectedX.join(', '),
+                    category_y: currentConfig.selectedY.join(', '),
+                    words_x: currentHeatmapData.words_x,
+                    words_y: currentHeatmapData.words_y,
+                    matrix: currentHeatmapData.matrix,
+                    is_public: false,
+                    configuration: currentConfig
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert('Error saving: ' + data.error, 'danger');
+                } else {
+                    showAlert('Heatmap saved successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/projects';
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                showAlert('Error saving heatmap: ' + error, 'danger');
+            });
+        });
+
+        // Download heatmap
+        document.getElementById('downloadHeatmap').addEventListener('click', function() {
+            if (!currentHeatmapData) {
+                showAlert('No heatmap data to download', 'warning');
+                return;
+            }
+
+            fetch('/heatmap/download_all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(currentHeatmapData)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Download failed');
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `multi_category_heatmap.zip`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showAlert('Download started successfully!', 'success');
+            })
+            .catch(error => {
+                showAlert('Error downloading: ' + error, 'danger');
+            });
+        });
+
+        // Export configuration
+        document.getElementById('exportConfig').addEventListener('click', function() {
+            if (!currentConfig) {
+                showAlert('No configuration to export', 'warning');
+                return;
+            }
+
+            const configData = {
+                configuration: currentConfig,
+                heatmap_info: {
+                    dimensions: currentHeatmapData ? 
+                        `${currentHeatmapData.words_x.length} × ${currentHeatmapData.words_y.length}` : 'N/A',
+                    generated: new Date().toISOString()
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `heatmap_config_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showAlert('Configuration exported successfully!', 'success');
+        });
+
+        // Download matrix as CSV
+        function downloadMatrixCSV() {
+            if (!currentHeatmapData) return;
+            
+            const matrix = currentHeatmapData.matrix;
+            const wordsX = currentHeatmapData.words_x;
+            const wordsY = currentHeatmapData.words_y;
+            
+            let csvContent = "Word," + wordsY.join(',') + "\n";
+            
+            wordsX.forEach((wordX, i) => {
+                const row = matrix[i].map(val => val.toFixed(4)).join(',');
+                csvContent += wordX + ',' + row + "\n";
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `similarity_matrix_${wordsX.length}x${wordsY.length}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Initialize word previews
+        document.getElementById('max_words_per_category_x').addEventListener('change', function() {
+            previewSelectedWords('x');
+            updateSelectionSummary();
+        });
+
+        document.getElementById('max_words_per_category_y').addEventListener('change', function() {
+            previewSelectedWords('y');
+            updateSelectionSummary();
+        });
+
+        document.getElementById('random_words_x').addEventListener('change', function() {
+            previewSelectedWords('x');
+        });
+
+        document.getElementById('random_words_y').addEventListener('change', function() {
+            previewSelectedWords('y');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.project_name }} - Word2Vec Analysis Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .heatmap-card {
+            transition: transform 0.2s;
+        }
+        .heatmap-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-brain me-2"></i>Word2Vec Analysis Tool
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('projects') }}">
+                    <i class="fas fa-folder me-1"></i>Projects
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user me-1"></i>Profile
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('literature_search') }}">
+                    <i class="fas fa-search me-1"></i>Literature
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Project Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h4 class="card-title mb-1">{{ project.project_name }}</h4>
+                                {% if project.description %}
+                                <p class="card-text text-muted">{{ project.description }}</p>
+                                {% endif %}
+                                <div class="text-muted small">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Created: {{ project.created_at.strftime('%Y-%m-%d') }} | 
+                                    Updated: {{ project.updated_at.strftime('%Y-%m-%d') }}
+                                    {% if project.is_public %}
+                                    <span class="badge bg-success ms-2">Public</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-2">Private</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{{ url_for('edit_project', project_id=project.id) }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </a>
+                                <button class="btn btn-outline-danger" data-bs-toggle="modal" 
+                                        data-bs-target="#deleteProjectModal">
+                                    <i class="fas fa-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmaps Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-th me-2"></i>Saved Heatmaps
+                        </h5>
+                        <a href="{{ url_for('visualize') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Create New Heatmap
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if heatmaps %}
+                        <div class="row">
+                            {% for heatmap in heatmaps %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card heatmap-card h-100">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">{{ heatmap.heatmap_name }}</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <strong>Categories:</strong> {{ heatmap.category_x }} vs {{ heatmap.category_y }}
+                                            </small>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <strong>Words:</strong> {{ heatmap.words_x|length }} × {{ heatmap.words_y|length }}
+                                            </small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small class="text-muted">
+                                                <strong>Created:</strong> {{ heatmap.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <div class="btn-group w-100">
+                                            <button class="btn btn-sm btn-outline-primary view-heatmap" 
+                                                    data-heatmap-id="{{ heatmap.id }}">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-heatmap" 
+                                                    data-heatmap-id="{{ heatmap.id }}"
+                                                    data-heatmap-name="{{ heatmap.heatmap_name }}">
+                                                <i class="fas fa-trash me-1"></i>Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-th-large"></i>
+                            <h5>No Heatmaps Yet</h5>
+                            <p class="text-muted">You haven't created any heatmaps for this project.</p>
+                            <a href="{{ url_for('visualize') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Your First Heatmap
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Project Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the project <strong>"{{ project.project_name }}"</strong>?</p>
+                    <p class="text-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        This action cannot be undone. All heatmaps in this project will also be deleted.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Delete Project
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Delete heatmap confirmation
+        document.querySelectorAll('.delete-heatmap').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const heatmapId = this.getAttribute('data-heatmap-id');
+                const heatmapName = this.getAttribute('data-heatmap-name');
+                
+                if (confirm(`Are you sure you want to delete the heatmap "${heatmapName}"?`)) {
+                    fetch(`/heatmap/${heatmapId}/delete`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error deleting heatmap: ' + error);
+                    });
+                }
+            });
+        });
+
+        // View heatmap
+        document.querySelectorAll('.view-heatmap').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const heatmapId = this.getAttribute('data-heatmap-id');
+                // Navigate to heatmap visualization page
+                window.location.href = `/visualize?heatmap=${heatmapId}`;
+            });
+        });
+    </script>
+</body>
+</html>

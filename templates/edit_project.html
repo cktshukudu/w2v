@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Project - Word2Vec Analysis Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .project-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .form-actions {
+            border-top: 1px solid #dee2e6;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-brain me-2"></i>Word2Vec Analysis Tool
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('projects') }}">
+                    <i class="fas fa-folder me-1"></i>Projects
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user me-1"></i>Profile
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('literature_search') }}">
+                     <i class="fas fa-search me-1"></i>Literature
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-edit me-2"></i>Edit Project
+                        </h5>
+                        <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Project
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" class="project-form">
+                            <div class="mb-3">
+                                <label for="project_name" class="form-label">Project Name *</label>
+                                <input type="text" class="form-control" id="project_name" name="project_name" 
+                                       value="{{ project.project_name }}" required maxlength="100" 
+                                       placeholder="Enter a descriptive project name">
+                                <div class="form-text">Choose a unique name for your project.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="3" placeholder="Describe what this project is about...">{{ project.description or '' }}</textarea>
+                                <div class="form-text">Optional: Add a description to help you remember the purpose of this project.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_public" name="is_public" 
+                                           {{ 'checked' if project.is_public else '' }}>
+                                    <label class="form-check-label" for="is_public">
+                                        Make this project public
+                                    </label>
+                                </div>
+                                <div class="form-text">Public projects can be viewed by other users (heatmap data only).</div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Project
+                                </button>
+                                <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Project Info Card -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Project Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Created:</strong>
+                                <p class="mb-2">{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Last Updated:</strong>
+                                <p class="mb-2">{{ project.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Status:</strong>
+                                <p class="mb-0">
+                                    {% if project.is_public %}
+                                    <span class="badge bg-success">Public</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Private</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

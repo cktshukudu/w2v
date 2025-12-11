@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Word2Vec Analysis Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .stat-card {
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .recent-activity {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-brain me-2"></i>Word2Vec Analysis Tool
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('projects') }}">
+                    <i class="fas fa-folder me-1"></i>Projects
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user me-1"></i>Profile
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Welcome Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h4 class="card-title">Welcome back, {{ user.first_name or user.username }}!</h4>
+                        <p class="card-text">Manage your Word2Vec projects and analyze word similarities.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-folder fa-2x mb-2"></i>
+                        <h5>{{ projects|length }}</h5>
+                        <p class="mb-0">Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-th fa-2x mb-2"></i>
+                        <h5>{{ projects|sum(attribute='heatmap_count') }}</h5>
+                        <p class="mb-0">Heatmaps</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-2x mb-2"></i>
+                        <h5>{{ activities|length }}</h5>
+                        <p class="mb-0">Activities</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h5>Active</h5>
+                        <p class="mb-0">Status</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Recent Projects -->
+            <div class="col-md-8 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-folder me-2"></i>Recent Projects
+                        </h5>
+                        <a href="{{ url_for('projects') }}" class="btn btn-sm btn-outline-primary">
+                            View All
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if projects %}
+                            <div class="list-group">
+                                {% for project in projects[:5] %}
+                                <a href="{{ url_for('project_detail', project_id=project.id) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ project.project_name }}</h6>
+                                        <small>{{ project.heatmap_count }} heatmaps</small>
+                                    </div>
+                                    {% if project.description %}
+                                    <p class="mb-1 text-muted">{{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        Updated: {{ project.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                                        {% if project.is_public %}
+                                        <span class="badge bg-success ms-2">Public</span>
+                                        {% endif %}
+                                    </small>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No projects yet</p>
+                                <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Create First Project
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>Recent Activity
+                        </h5>
+                    </div>
+                    <div class="card-body recent-activity">
+                        {% if activities %}
+                            <div class="list-group list-group-flush">
+                                {% for activity in activities %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-{{ 
+                                                'user-plus' if activity.activity_type == 'registration' 
+                                                else 'sign-in-alt' if activity.activity_type == 'login'
+                                                else 'project-diagram' if 'project' in activity.activity_type
+                                                else 'chart-heat' if 'heatmap' in activity.activity_type
+                                                else 'file-upload' if 'file' in activity.activity_type
+                                                else 'cog'
+                                            }} me-2"></i>
+                                            {{ activity.description }}
+                                        </h6>
+                                    </div>
+                                    <small class="text-muted">{{ activity.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No recent activity</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <a href="{{ url_for('create_project') }}" class="btn btn-outline-primary w-100 h-100 py-3">
+                                    <i class="fas fa-plus-circle fa-2x mb-2"></i><br>
+                                    New Project
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="{{ url_for('upload_page') }}" class="btn btn-outline-success w-100 h-100 py-3">
+                                    <i class="fas fa-upload fa-2x mb-2"></i><br>
+                                    Upload Files
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="{{ url_for('analyze') }}" class="btn btn-outline-info w-100 h-100 py-3">
+                                    <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
+                                    Analyze
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="{{ url_for('visualize') }}" class="btn btn-outline-warning w-100 h-100 py-3">
+                                    <i class="fas fa-th fa-2x mb-2"></i><br>
+                                    Visualize
+                                </a>
+                            </div>
+                              <div class="col-md-3 mb-3">
+                                <a href="{{ url_for('literature_search') }}" class="btn btn-outline-warning w-100 h-100 py-3">
+                                    <i class="fas fa-th fa-2x mb-2"></i><br>
+                                    Literature
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

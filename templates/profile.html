@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Word2Vec Analysis Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .activity-item {
+            border-left: 3px solid #007bff;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-brain me-2"></i>Word2Vec Analysis Tool
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('projects') }}">
+                    <i class="fas fa-folder me-1"></i>Projects
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user me-1"></i>Profile
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    <div class="bg-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                         style="width: 100px; height: 100px;">
+                        <i class="fas fa-user fa-3x text-primary"></i>
+                    </div>
+                </div>
+                <div class="col-md-10">
+                    <h1 class="display-5">
+                        {% if user.first_name and user.last_name %}
+                            {{ user.first_name }} {{ user.last_name }}
+                        {% else %}
+                            {{ user.username }}
+                        {% endif %}
+                    </h1>
+                    <p class="lead mb-1">@{{ user.username }}</p>
+                    <p class="mb-0">{{ user.email }}</p>
+                    {% if user.is_admin %}
+                    <span class="badge bg-warning mt-2">
+                        <i class="fas fa-crown me-1"></i>Administrator
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row">
+            <!-- User Stats -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>Usage Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if user_stats %}
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <div class="card stat-card bg-primary text-white">
+                                    <div class="card-body">
+                                        <i class="fas fa-folder fa-2x mb-2"></i>
+                                        <h3>{{ user_stats.project_count or 0 }}</h3>
+                                        <p class="mb-0">Projects</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card stat-card bg-success text-white">
+                                    <div class="card-body">
+                                        <i class="fas fa-th fa-2x mb-2"></i>
+                                        <h3>{{ user_stats.heatmap_count or 0 }}</h3>
+                                        <p class="mb-0">Heatmaps</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card stat-card bg-info text-white">
+                                    <div class="card-body">
+                                        <i class="fas fa-clock fa-2x mb-2"></i>
+                                        <h5>
+                                            {% if user_stats.last_activity %}
+                                                {{ user_stats.last_activity.strftime('%m/%d/%Y') }}
+                                            {% else %}
+                                                Never
+                                            {% endif %}
+                                        </h5>
+                                        <p class="mb-0">Last Active</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No statistics available yet</p>
+                            <p class="text-muted small">Start creating projects and heatmaps to see your usage statistics</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Account Information -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Account Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Username:</strong>
+                                <p class="mb-3">{{ user.username }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Email:</strong>
+                                <p class="mb-3">{{ user.email }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Name:</strong>
+                                <p class="mb-3">
+                                    {% if user.first_name and user.last_name %}
+                                        {{ user.first_name }} {{ user.last_name }}
+                                    {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Account Type:</strong>
+                                <p class="mb-3">
+                                    {% if user.is_admin %}
+                                        <span class="badge bg-warning">Administrator</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Standard User</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <strong>Member Since:</strong>
+                                <p class="mb-0">
+                                    {% if user_stats and user_stats.last_activity %}
+                                        {{ user_stats.last_activity.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & System Status -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a class="nav-link text-white" href="{{ url_for('literature_search') }}">
+                                <i class="fas fa-search me-1"></i>Literature
+                            </a>
+                            <a href="{{ url_for('create_project') }}" class="btn btn-outline-primary text-start">
+                                <i class="fas fa-plus-circle me-2"></i>New Project
+                            </a>
+                            <a href="{{ url_for('upload_page') }}" class="btn btn-outline-success text-start">
+                                <i class="fas fa-upload me-2"></i>Upload Files
+                            </a>
+                            <a href="{{ url_for('analyze') }}" class="btn btn-outline-info text-start">
+                                <i class="fas fa-chart-bar me-2"></i>Analyze Data
+                            </a>
+                            <a href="{{ url_for('visualize') }}" class="btn btn-outline-warning text-start">
+                                <i class="fas fa-th me-2"></i>Create Heatmap
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-server me-2"></i>System Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-circle text-success me-2"></i>
+                                <strong>Application:</strong>
+                            </span>
+                            <span class="badge bg-success">Online</span>
+                        </div>
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-database me-2"></i>
+                                <strong>Database:</strong>
+                            </span>
+                            <span class="badge bg-success">Connected</span>
+                        </div>
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-user me-2"></i>
+                                <strong>Session:</strong>
+                            </span>
+                            <span class="badge bg-success">Active</span>
+                        </div>
+                        <div class="mb-0 d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Last Login:</strong>
+                            </span>
+                            <span class="badge bg-info">Now</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Preview -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>Recent Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if user_stats and user_stats.last_activity %}
+                        <div class="activity-item">
+                            <strong>Last Activity</strong>
+                            <p class="mb-1 text-muted small">
+                                {{ user_stats.last_activity.strftime('%Y-%m-%d %H:%M') }}
+                            </p>
+                        </div>
+                        <div class="activity-item">
+                            <strong>Account Status</strong>
+                            <p class="mb-1 text-muted small">Active and in good standing</p>
+                        </div>
+                        <div class="activity-item">
+                            <strong>Storage Usage</strong>
+                            <p class="mb-1 text-muted small">Within normal limits</p>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small mb-0">No recent activity recorded</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Tips -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>Getting Started Tips
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-upload text-primary me-2"></i>Upload Files</h6>
+                                <p class="small text-muted">Start by uploading PDF or text files to train your Word2Vec models.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-folder text-success me-2"></i>Organize Projects</h6>
+                                <p class="small text-muted">Create projects to organize your analyses by topic or research area.</p>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-chart-bar text-info me-2"></i>Analyze Relationships</h6>
+                                <p class="small text-muted">Use the analysis tools to explore word similarities and semantic relationships.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-th text-warning me-2"></i>Create Visualizations</h6>
+                                <p class="small text-muted">Generate heatmaps to visualize semantic similarities between word categories.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,389 @@
+[
+  {
+    "abstract": "Data science has become increasingly essential for the production of official statistics, as it enables the automated collection, processing, and analysis of large amounts of data. With such data science practices in place, it enables more timely, more insightful and more flexible reporting. However, the quality and integrity of data-science-driven statistics rely on the accuracy and reliability of the data sources and the machine learning techniques that support them. In particular, changes in data sources are inevitable to occur and pose significant risks that are crucial to address in the context of machine learning for official statistics.\n  This paper gives an overview of the main risks, liabilities, and uncertainties associated with changing data sources in the context of machine learning for official statistics. We provide a checklist of the most prevalent origins and causes of changing data sources; not only on a technical level but also regarding ownership, ethics, regulation, and public perception. Next, we highlight the repercussions of changing data sources on statistical reporting. These include technical effects such as concept drift, bias, availability, validity, accuracy and completeness, but also the neutrality and potential discontinuation of the statistical offering. We offer a few important precautionary measures, such as enhancing robustness in both data sourcing and statistical techniques, and thorough monitoring. In doing so, machine learning-based official statistics can maintain integrity, reliability, consistency, and relevance in policy-making, decision-making, and public discourse.",
+    "arxiv_id": "2306.04338v1",
+    "authors": [
+      "Cedric De Boom",
+      "Michael Reusens"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2306.04338v1",
+    "publication_year": "2023",
+    "published": "2023-06-07",
+    "source": "arxiv",
+    "title": "Changing Data Sources in the Age of Machine Learning for Official Statistics"
+  },
+  {
+    "abstract": "Learning curves are a concept from social sciences that has been adopted in the context of machine learning to assess the performance of a learning algorithm with respect to a certain resource, e.g., the number of training examples or the number of training iterations. Learning curves have important applications in several machine learning contexts, most notably in data acquisition, early stopping of model training, and model selection. For instance, learning curves can be used to model the performance of the combination of an algorithm and its hyperparameter configuration, providing insights into their potential suitability at an early stage and often expediting the algorithm selection process. Various learning curve models have been proposed to use learning curves for decision making. Some of these models answer the binary decision question of whether a given algorithm at a certain budget will outperform a certain reference performance, whereas more complex models predict the entire learning curve of an algorithm. We contribute a framework that categorises learning curve approaches using three criteria: the decision-making situation they address, the intrinsic learning curve question they answer and the type of resources they use. We survey papers from the literature and classify them into this framework.",
+    "arxiv_id": "2201.12150v2",
+    "authors": [
+      "Felix Mohr",
+      "Jan N. van Rijn"
+    ],
+    "cited_by": 0,
+    "doi": "10.1007/s10994-024-06619-7",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2201.12150v2",
+    "publication_year": "2022",
+    "published": "2022-01-28",
+    "source": "arxiv",
+    "title": "Learning Curves for Decision Making in Supervised Machine Learning: A Survey"
+  },
+  {
+    "abstract": "Online active learning is a paradigm in machine learning that aims to select the most informative data points to label from a data stream. The problem of minimizing the cost associated with collecting labeled observations has gained a lot of attention in recent years, particularly in real-world applications where data is only available in an unlabeled form. Annotating each observation can be time-consuming and costly, making it difficult to obtain large amounts of labeled data. To overcome this issue, many active learning strategies have been proposed in the last decades, aiming to select the most informative observations for labeling in order to improve the performance of machine learning models. These approaches can be broadly divided into two categories: static pool-based and stream-based active learning. Pool-based active learning involves selecting a subset of observations from a closed pool of unlabeled data, and it has been the focus of many surveys and literature reviews. However, the growing availability of data streams has led to an increase in the number of approaches that focus on online active learning, which involves continuously selecting and labeling observations as they arrive in a stream. This work aims to provide an overview of the most recently proposed approaches for selecting the most informative observations from data streams in real time. We review the various techniques that have been proposed and discuss their strengths and limitations, as well as the challenges and opportunities that exist in this area of research.",
+    "arxiv_id": "2302.08893v4",
+    "authors": [
+      "Davide Cacciarelli",
+      "Murat Kulahci"
+    ],
+    "cited_by": 0,
+    "doi": "10.1007/s10994-023-06454-2",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2302.08893v4",
+    "publication_year": "2023",
+    "published": "2023-02-17",
+    "source": "arxiv",
+    "title": "Active learning for data streams: a survey"
+  },
+  {
+    "abstract": "The ability to explain decisions made by machine learning models remains one of the most significant hurdles towards widespread adoption of AI in highly sensitive areas such as medicine, cybersecurity or autonomous driving. Great interest exists in understanding which features of the input data prompt model decision making. In this contribution, we propose a novel approach to identify relevant features of the input data, inspired by methods from the energy landscapes field, developed in the physical sciences. By identifying conserved weights within groups of minima of the loss landscapes, we can identify the drivers of model decision making. Analogues to this idea exist in the molecular sciences, where coordinate invariants or order parameters are employed to identify critical features of a molecule. However, no such approach exists for machine learning loss landscapes. We will demonstrate the applicability of energy landscape methods to machine learning models and give examples, both synthetic and from the real world, for how these methods can help to make models more interpretable.",
+    "arxiv_id": "2304.02381v2",
+    "authors": [
+      "Maximilian P Niroomand",
+      "David J Wales"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2304.02381v2",
+    "publication_year": "2023",
+    "published": "2023-04-05",
+    "source": "arxiv",
+    "title": "Physics-Inspired Interpretability Of Machine Learning Models"
+  },
+  {
+    "abstract": "Machine Learning (ML) has recently shown tremendous success in modeling various healthcare prediction tasks, ranging from disease diagnosis and prognosis to patient treatment. Due to the sensitive nature of medical data, privacy must be considered along the entire ML pipeline, from model training to inference. In this paper, we conduct a review of recent literature concerning Privacy-Preserving Machine Learning (PPML) for healthcare. We primarily focus on privacy-preserving training and inference-as-a-service, and perform a comprehensive review of existing trends, identify challenges, and discuss opportunities for future research directions. The aim of this review is to guide the development of private and efficient ML models in healthcare, with the prospects of translating research efforts into real-world settings.",
+    "arxiv_id": "2303.15563v1",
+    "authors": [
+      "Alejandro Guerra-Manzanares",
+      "L. Julian Lechuga Lopez",
+      "Michail Maniatakos",
+      "Farah E. Shamout"
+    ],
+    "cited_by": 0,
+    "doi": "10.1007/978-3-031-39539-0_3",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2303.15563v1",
+    "publication_year": "2023",
+    "published": "2023-03-27",
+    "source": "arxiv",
+    "title": "Privacy-preserving machine learning for healthcare: open challenges and future perspectives"
+  },
+  {
+    "abstract": "This research paper delves into the innovative integration of Shannon entropy and rough set theory, presenting a novel approach to generalize the evaluation approach in machine learning. The conventional application of entropy, primarily focused on information uncertainty, is extended through its combination with rough set theory to offer a deeper insight into data's intrinsic structure and the interpretability of machine learning models. We introduce a comprehensive framework that synergizes the granularity of rough set theory with the uncertainty quantification of Shannon entropy, applied across a spectrum of machine learning algorithms. Our methodology is rigorously tested on various datasets, showcasing its capability to not only assess predictive performance but also to illuminate the underlying data complexity and model robustness. The results underscore the utility of this integrated approach in enhancing the evaluation landscape of machine learning, offering a multi-faceted perspective that balances accuracy with a profound understanding of data attributes and model dynamics. This paper contributes a groundbreaking perspective to machine learning evaluation, proposing a method that encapsulates a holistic view of model performance, thereby facilitating more informed decision-making in model selection and application.",
+    "arxiv_id": "2404.12511v1",
+    "authors": [
+      "Olga Cherednichenko",
+      "Dmytro Chernyshov",
+      "Dmytro Sytnikov",
+      "Polina Sytnikova"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2404.12511v1",
+    "publication_year": "2024",
+    "published": "2024-04-18",
+    "source": "arxiv",
+    "title": "Generalizing Machine Learning Evaluation through the Integration of Shannon Entropy and Rough Set Theory"
+  },
+  {
+    "abstract": "We seek to enable classic processing of continuous ultra-sparse spatiotemporal data generated by event-based sensors with dense machine learning models. We propose a novel hybrid pipeline composed of asynchronous sensing and synchronous processing that combines several ideas: (1) an embedding based on PointNet models -- the ALERT module -- that can continuously integrate new and dismiss old events thanks to a leakage mechanism, (2) a flexible readout of the embedded data that allows to feed any downstream model with always up-to-date features at any sampling rate, (3) exploiting the input sparsity in a patch-based approach inspired by Vision Transformer to optimize the efficiency of the method. These embeddings are then processed by a transformer model trained for object and gesture recognition. Using this approach, we achieve performances at the state-of-the-art with a lower latency than competitors. We also demonstrate that our asynchronous model can operate at any desired sampling rate.",
+    "arxiv_id": "2402.01393v3",
+    "authors": [
+      "Carmen Martin-Turrero",
+      "Maxence Bouvier",
+      "Manuel Breitenstein",
+      "Pietro Zanuttigh",
+      "Vincent Parret"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2402.01393v3",
+    "publication_year": "2024",
+    "published": "2024-02-02",
+    "source": "arxiv",
+    "title": "ALERT-Transformer: Bridging Asynchronous and Synchronous Machine Learning for Real-Time Event-based Spatio-Temporal Data"
+  },
+  {
+    "abstract": "International economics has a long history of improving our understanding of factors causing trade, and the consequences of free flow of goods and services across countries. The recent shocks to the free trade regime, especially trade disputes among major economies, as well as black swan events, such as trade wars and pandemics, raise the need for improved predictions to inform policy decisions. AI methods are allowing economists to solve such prediction problems in new ways. In this manuscript, we present novel methods that predict and associate food and agricultural commodities traded internationally. Association Rules (AR) analysis has been deployed successfully for economic scenarios at the consumer or store level, such as for market basket analysis. In our work however, we present analysis of imports and exports associations and their effects on commodity trade flows. Moreover, Ensemble Machine Learning methods are developed to provide improved agricultural trade predictions, outlier events' implications, and quantitative pointers to policy makers.",
+    "arxiv_id": "2111.07508v1",
+    "authors": [
+      "Feras A. Batarseh",
+      "Munisamy Gopinath",
+      "Anderson Monken",
+      "Zhengrong Gu"
+    ],
+    "cited_by": 0,
+    "doi": "10.1016/j.mlwa.2021.100046",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2111.07508v1",
+    "publication_year": "2021",
+    "published": "2021-11-15",
+    "source": "arxiv",
+    "title": "Public Policymaking for International Agricultural Trade using Association Rules and Ensemble Machine Learning"
+  },
+  {
+    "abstract": "The topic of comprehensibility of machine-learned theories has recently drawn increasing attention. Inductive Logic Programming (ILP) uses logic programming to derive logic theories from small data based on abduction and induction techniques. Learned theories are represented in the form of rules as declarative descriptions of obtained knowledge. In earlier work, the authors provided the first evidence of a measurable increase in human comprehension based on machine-learned logic rules for simple classification tasks. In a later study, it was found that the presentation of machine-learned explanations to humans can produce both beneficial and harmful effects in the context of game learning. We continue our investigation of comprehensibility by examining the effects of the ordering of concept presentations on human comprehension. In this work, we examine the explanatory effects of curriculum order and the presence of machine-learned explanations for sequential problem-solving. We show that 1) there exist tasks A and B such that learning A before B has a better human comprehension with respect to learning B before A and 2) there exist tasks A and B such that the presence of explanations when learning A contributes to improved human comprehension when subsequently learning B. We propose a framework for the effects of sequential teaching on comprehension based on an existing definition of comprehensibility and provide evidence for support from data collected in human trials. Empirical results show that sequential teaching of concepts with increasing complexity a) has a beneficial effect on human comprehension and b) leads to human re-discovery of divide-and-conquer problem-solving strategies, and c) studying machine-learned explanations allows adaptations of human problem-solving strategy with better performance.",
+    "arxiv_id": "2205.10250v2",
+    "authors": [
+      "Lun Ai",
+      "Johannes Langer",
+      "Stephen H. Muggleton",
+      "Ute Schmid"
+    ],
+    "cited_by": 0,
+    "doi": "10.1007/s10994-023-06351-8",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2205.10250v2",
+    "publication_year": "2022",
+    "published": "2022-05-20",
+    "source": "arxiv",
+    "title": "Explanatory machine learning for sequential human teaching"
+  },
+  {
+    "abstract": "Uncertainty in machine learning is not generally taught as general knowledge in Machine Learning course curricula. In this paper we propose a short curriculum for a course about uncertainty in machine learning, and complement the course with a selection of use cases, aimed to trigger discussion and let students play with the concepts of uncertainty in a programming setting. Our use cases cover the concept of output uncertainty, Bayesian neural networks and weight distributions, sources of uncertainty, and out of distribution detection. We expect that this curriculum and set of use cases motivates the community to adopt these important concepts into courses for safety in AI.",
+    "arxiv_id": "2108.08712v1",
+    "authors": [
+      "Matias Valdenegro-Toro"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2108.08712v1",
+    "publication_year": "2021",
+    "published": "2021-08-19",
+    "source": "arxiv",
+    "title": "Teaching Uncertainty Quantification in Machine Learning through Use Cases"
+  },
+  {
+    "abstract": "Smarter applications are making better use of the insights gleaned from data, having an impact on every industry and research discipline. At the core of this revolution lies the tools and the methods that are driving it, from processing the massive piles of data generated each day to learning from and taking useful action. Deep neural networks, along with advancements in classical ML and scalable general-purpose GPU computing, have become critical components of artificial intelligence, enabling many of these astounding breakthroughs and lowering the barrier to adoption. Python continues to be the most preferred language for scientific computing, data science, and machine learning, boosting both performance and productivity by enabling the use of low-level libraries and clean high-level APIs. This survey offers insight into the field of machine learning with Python, taking a tour through important topics to identify some of the core hardware and software paradigms that have enabled it. We cover widely-used libraries and concepts, collected together for holistic comparison, with the goal of educating the reader and driving the field of Python machine learning forward.",
+    "arxiv_id": "2002.04803v2",
+    "authors": [
+      "Sebastian Raschka",
+      "Joshua Patterson",
+      "Corey Nolet"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2002.04803v2",
+    "publication_year": "2020",
+    "published": "2020-02-12",
+    "source": "arxiv",
+    "title": "Machine Learning in Python: Main developments and technology trends in data science, machine learning, and artificial intelligence"
+  },
+  {
+    "abstract": "Transfer learning is crucial in training deep neural networks on new target tasks. Current transfer learning methods always assume at least one of (i) source and target task label spaces overlap, (ii) source datasets are available, and (iii) target network architectures are consistent with source ones. However, holding these assumptions is difficult in practical settings because the target task rarely has the same labels as the source task, the source dataset access is restricted due to storage costs and privacy, and the target architecture is often specialized to each task. To transfer source knowledge without these assumptions, we propose a transfer learning method that uses deep generative models and is composed of the following two stages: pseudo pre-training (PP) and pseudo semi-supervised learning (P-SSL). PP trains a target architecture with an artificial dataset synthesized by using conditional source generative models. P-SSL applies SSL algorithms to labeled target data and unlabeled pseudo samples, which are generated by cascading the source classifier and generative models to condition them with target samples. Our experimental results indicate that our method can outperform the baselines of scratch training and knowledge distillation.",
+    "arxiv_id": "2204.12833v3",
+    "authors": [
+      "Shin'ya Yamaguchi",
+      "Sekitoshi Kanai",
+      "Atsutoshi Kumagai",
+      "Daiki Chijiwa",
+      "Hisashi Kashima"
+    ],
+    "cited_by": 0,
+    "doi": "10.1007/s10994-025-06748-7",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2204.12833v3",
+    "publication_year": "2022",
+    "published": "2022-04-27",
+    "source": "arxiv",
+    "title": "Transfer Learning with Pre-trained Conditional Generative Models"
+  },
+  {
+    "abstract": "Significant advancements have been made in recent years to optimize patient recruitment for clinical trials, however, improved methods for patient recruitment prediction are needed to support trial site selection and to estimate appropriate enrollment timelines in the trial design stage. In this paper, using data from thousands of historical clinical trials, we explore machine learning methods to predict the number of patients enrolled per month at a clinical trial site over the course of a trial's enrollment duration. We show that these methods can reduce the error that is observed with current industry standards and propose opportunities for further improvement.",
+    "arxiv_id": "2111.07407v1",
+    "authors": [
+      "Jingshu Liu",
+      "Patricia J Allen",
+      "Luke Benz",
+      "Daniel Blickstein",
+      "Evon Okidi",
+      "Xiao Shi"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2111.07407v1",
+    "publication_year": "2021",
+    "published": "2021-11-14",
+    "source": "arxiv",
+    "title": "A Machine Learning Approach for Recruitment Prediction in Clinical Trial Design"
+  },
+  {
+    "abstract": "We investigate the potential of using gravitational wave (GW) signals from rotating core-collapse supernovae to probe the equation of state (EOS) of nuclear matter. By generating GW signals from simulations with various EOSs, we train machine learning models to classify them and evaluate their performance. Our study builds on previous work by examining how different machine learning models, parameters, and data preprocessing techniques impact classification accuracy. We test convolutional and recurrent neural networks, as well as six classical algorithms: random forest, support vector machines, naïve Bayes, logistic regression, $k$-nearest neighbors, and eXtreme gradient boosting. All models, except naïve Bayes, achieve over 90 per cent accuracy on our dataset. Additionally, we assess the impact of approximating the GW signal using the general relativistic effective potential (GREP) on EOS classification. We find that models trained on GREP data exhibit low classification accuracy. However, normalizing time by the peak signal frequency, which partially compensates for the absence of the time dilation effect in GREP, leads to a notable improvement in accuracy. Despite this, the accuracy does not exceed 70 per cent, suggesting that GREP lacks the precision necessary for EOS classification. Finally, our study has several limitations, including the omission of detector noise and the focus on a single progenitor mass model, which will be addressed in future works.",
+    "arxiv_id": "2409.14508v2",
+    "authors": [
+      "Y. Sultan Abylkairov",
+      "Matthew C. Edwards",
+      "Daniil Orel",
+      "Ayan Mitra",
+      "Bekdaulet Shukirgaliyev",
+      "Ernazar Abdikamalov"
+    ],
+    "cited_by": 0,
+    "doi": "10.1088/2632-2153/ada33a",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2409.14508v2",
+    "publication_year": "2024",
+    "published": "2024-09-22",
+    "source": "arxiv",
+    "title": "Evaluating Machine Learning Models for Supernova Gravitational Wave Signal Classification"
+  },
+  {
+    "abstract": "Network data are ubiquitous in modern machine learning, with tasks of interest including node classification, node clustering and link prediction. A frequent approach begins by learning an Euclidean embedding of the network, to which algorithms developed for vector-valued data are applied. For large networks, embeddings are learned using stochastic gradient methods where the sub-sampling scheme can be freely chosen. Despite the strong empirical performance of such methods, they are not well understood theoretically. Our work encapsulates representation methods using a subsampling approach, such as node2vec, into a single unifying framework. We prove, under the assumption that the graph is exchangeable, that the distribution of the learned embedding vectors asymptotically decouples. Moreover, we characterize the asymptotic distribution and provided rates of convergence, in terms of the latent parameters, which includes the choice of loss function and the embedding dimension. This provides a theoretical foundation to understand what the embedding vectors represent and how well these methods perform on downstream tasks. Notably, we observe that typically used loss functions may lead to shortcomings, such as a lack of Fisher consistency.",
+    "arxiv_id": "2107.02363v4",
+    "authors": [
+      "Andrew Davison",
+      "Morgane Austern"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2107.02363v4",
+    "publication_year": "2021",
+    "published": "2021-07-06",
+    "source": "arxiv",
+    "title": "Asymptotics of Network Embeddings Learned via Subsampling"
+  },
+  {
+    "abstract": "Machine learning bias in mental health is becoming an increasingly pertinent challenge. Despite promising efforts indicating that multitask approaches often work better than unitask approaches, there is minimal work investigating the impact of multitask learning on performance and fairness in depression detection nor leveraged it to achieve fairer prediction outcomes. In this work, we undertake a systematic investigation of using a multitask approach to improve performance and fairness for depression detection. We propose a novel gender-based task-reweighting method using uncertainty grounded in how the PHQ-8 questionnaire is structured. Our results indicate that, although a multitask approach improves performance and fairness compared to a unitask approach, the results are not always consistent and we see evidence of negative transfer and a reduction in the Pareto frontier, which is concerning given the high-stake healthcare setting. Our proposed approach of gender-based reweighting with uncertainty improves performance and fairness and alleviates both challenges to a certain extent. Our findings on each PHQ-8 subitem task difficulty are also in agreement with the largest study conducted on the PHQ-8 subitem discrimination capacity, thus providing the very first tangible evidence linking ML findings with large-scale empirical population studies conducted on the PHQ-8.",
+    "arxiv_id": "2501.09687v1",
+    "authors": [
+      "Jiaee Cheong",
+      "Aditya Bangar",
+      "Sinan Kalkan",
+      "Hatice Gunes"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2501.09687v1",
+    "publication_year": "2025",
+    "published": "2025-01-16",
+    "source": "arxiv",
+    "title": "U-Fair: Uncertainty-based Multimodal Multitask Learning for Fairer Depression Detection"
+  },
+  {
+    "abstract": "Machine learning is an established and frequently used technique in industry and academia but a standard process model to improve success and efficiency of machine learning applications is still missing. Project organizations and machine learning practitioners have a need for guidance throughout the life cycle of a machine learning application to meet business expectations. We therefore propose a process model for the development of machine learning applications, that covers six phases from defining the scope to maintaining the deployed machine learning application. The first phase combines business and data understanding as data availability oftentimes affects the feasibility of the project. The sixth phase covers state-of-the-art approaches for monitoring and maintenance of a machine learning applications, as the risk of model degradation in a changing environment is eminent. With each task of the process, we propose quality assurance methodology that is suitable to adress challenges in machine learning development that we identify in form of risks. The methodology is drawn from practical experience and scientific literature and has proven to be general and stable. The process model expands on CRISP-DM, a data mining process model that enjoys strong industry support but lacks to address machine learning specific tasks. Our work proposes an industry and application neutral process model tailored for machine learning applications with focus on technical tasks for quality assurance.",
+    "arxiv_id": "2003.05155v2",
+    "authors": [
+      "Stefan Studer",
+      "Thanh Binh Bui",
+      "Christian Drescher",
+      "Alexander Hanuschkin",
+      "Ludwig Winkler",
+      "Steven Peters",
+      "Klaus-Robert Mueller"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2003.05155v2",
+    "publication_year": "2020",
+    "published": "2020-03-11",
+    "source": "arxiv",
+    "title": "Towards CRISP-ML(Q): A Machine Learning Process Model with Quality Assurance Methodology"
+  },
+  {
+    "abstract": "We present a federated learning framework that is designed to robustly deliver good predictive performance across individual clients with heterogeneous data. The proposed approach hinges upon a superquantile-based learning objective that captures the tail statistics of the error distribution over heterogeneous clients. We present a stochastic training algorithm that interleaves differentially private client filtering with federated averaging steps. We prove finite time convergence guarantees for the algorithm: $O(1/\\sqrt{T})$ in the nonconvex case in $T$ communication rounds and $O(\\exp(-T/κ^{3/2}) + κ/T)$ in the strongly convex case with local condition number $κ$. Experimental results on benchmark datasets for federated learning demonstrate that our approach is competitive with classical ones in terms of average error and outperforms them in terms of tail statistics of the error.",
+    "arxiv_id": "2112.09429v2",
+    "authors": [
+      "Krishna Pillutla",
+      "Yassine Laguel",
+      "Jérôme Malick",
+      "Zaid Harchaoui"
+    ],
+    "cited_by": 0,
+    "doi": "10.1007/s10994-023-06332-x",
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2112.09429v2",
+    "publication_year": "2021",
+    "published": "2021-12-17",
+    "source": "arxiv",
+    "title": "Federated Learning with Superquantile Aggregation for Heterogeneous Data"
+  },
+  {
+    "abstract": "We have entered a new era of machine learning (ML), where the most accurate algorithm with superior predictive power may not even be deployable, unless it is admissible under the regulatory constraints. This has led to great interest in developing fair, transparent and trustworthy ML methods. The purpose of this article is to introduce a new information-theoretic learning framework (admissible machine learning) and algorithmic risk-management tools (InfoGram, L-features, ALFA-testing) that can guide an analyst to redesign off-the-shelf ML methods to be regulatory compliant, while maintaining good prediction accuracy. We have illustrated our approach using several real-data examples from financial sectors, biomedical research, marketing campaigns, and the criminal justice system.",
+    "arxiv_id": "2108.07380v2",
+    "authors": [
+      "Subhadeep Mukhopadhyay"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2108.07380v2",
+    "publication_year": "2021",
+    "published": "2021-08-17",
+    "source": "arxiv",
+    "title": "InfoGram and Admissible Machine Learning"
+  },
+  {
+    "abstract": "Machine learning (ML) methods are having a huge impact across all of the sciences. However, ML has a strong ontology - in which only the data exist - and a strong epistemology - in which a model is considered good if it performs well on held-out training data. These philosophies are in strong conflict with both standard practices and key philosophies in the natural sciences. Here we identify some locations for ML in the natural sciences at which the ontology and epistemology are valuable. For example, when an expressive machine learning model is used in a causal inference to represent the effects of confounders, such as foregrounds, backgrounds, or instrument calibration parameters, the model capacity and loose philosophy of ML can make the results more trustworthy. We also show that there are contexts in which the introduction of ML introduces strong, unwanted statistical biases. For one, when ML models are used to emulate physical (or first-principles) simulations, they amplify confirmation biases. For another, when expressive regressions are used to label datasets, those labels cannot be used in downstream joint or ensemble analyses without taking on uncontrolled biases. The question in the title is being asked of all of the natural sciences; that is, we are calling on the scientific communities to take a step back and consider the role and value of ML in their fields; the (partial) answers we give here come from the particular perspective of physics.",
+    "arxiv_id": "2405.18095v2",
+    "authors": [
+      "David W. Hogg",
+      "Soledad Villar"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2405.18095v2",
+    "publication_year": "2024",
+    "published": "2024-05-28",
+    "source": "arxiv",
+    "title": "Is machine learning good or bad for the natural sciences?"
+  },
+  {
+    "abstract": "Measuring the similarity between data points often requires domain knowledge, which can in parts be compensated by relying on unsupervised methods such as latent-variable models, where similarity/distance is estimated in a more compact latent space. Prevalent is the use of the Euclidean metric, which has the drawback of ignoring information about similarity of data stored in the decoder, as captured by the framework of Riemannian geometry. We propose an extension to the framework of variational auto-encoders allows learning flat latent manifolds, where the Euclidean metric is a proxy for the similarity between data points. This is achieved by defining the latent space as a Riemannian manifold and by regularising the metric tensor to be a scaled identity matrix. Additionally, we replace the compact prior typically used in variational auto-encoders with a recently presented, more expressive hierarchical one---and formulate the learning problem as a constrained optimisation problem. We evaluate our method on a range of data-sets, including a video-tracking benchmark, where the performance of our unsupervised approach nears that of state-of-the-art supervised approaches, while retaining the computational efficiency of straight-line-based approaches.",
+    "arxiv_id": "2002.04881v3",
+    "authors": [
+      "Nutan Chen",
+      "Alexej Klushyn",
+      "Francesco Ferroni",
+      "Justin Bayer",
+      "Patrick van der Smagt"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2002.04881v3",
+    "publication_year": "2020",
+    "published": "2020-02-12",
+    "source": "arxiv",
+    "title": "Learning Flat Latent Manifolds with VAEs"
+  },
+  {
+    "abstract": "Machine learning research has advanced in multiple aspects, including model structures and learning methods. The effort to automate such research, known as AutoML, has also made significant progress. However, this progress has largely focused on the architecture of neural networks, where it has relied on sophisticated expert-designed layers as building blocks---or similarly restrictive search spaces. Our goal is to show that AutoML can go further: it is possible today to automatically discover complete machine learning algorithms just using basic mathematical operations as building blocks. We demonstrate this by introducing a novel framework that significantly reduces human bias through a generic search space. Despite the vastness of this space, evolutionary search can still discover two-layer neural networks trained by backpropagation. These simple neural networks can then be surpassed by evolving directly on tasks of interest, e.g. CIFAR-10 variants, where modern techniques emerge in the top algorithms, such as bilinear interactions, normalized gradients, and weight averaging. Moreover, evolution adapts algorithms to different task types: e.g., dropout-like techniques appear when little data is available. We believe these preliminary successes in discovering machine learning algorithms from scratch indicate a promising new direction for the field.",
+    "arxiv_id": "2003.03384v2",
+    "authors": [
+      "Esteban Real",
+      "Chen Liang",
+      "David R. So",
+      "Quoc V. Le"
+    ],
+    "cited_by": 0,
+    "doi": null,
+    "journal": "arXiv",
+    "pdf_url": "https://arxiv.org/pdf/2003.03384v2",
+    "publication_year": "2020",
+    "published": "2020-03-06",
+    "source": "arxiv",
+    "title": "AutoML-Zero: Evolving Machine Learning Algorithms From Scratch"
+  }
+]

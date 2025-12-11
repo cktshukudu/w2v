@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Literature Search - Word2Vec Analysis Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        .paper-card {
+            transition: all 0.2s;
+            border-left: 4px solid #007bff;
+        }
+        .paper-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .paper-card.arxiv {
+            border-left-color: #28a745;
+        }
+        .paper-card.semantic_scholar {
+            border-left-color: #dc3545;
+        }
+        .paper-card.crossref {
+            border-left-color: #17a2b8;
+        }
+        .abstract-text {
+            max-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+        .abstract-text.expanded {
+            max-height: none;
+        }
+        .read-more {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, white 50%);
+            padding-left: 30px;
+            color: #007bff;
+            cursor: pointer;
+        }
+        .selected-paper {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        .progress-container {
+            display: none;
+        }
+        .stats-badge {
+            font-size: 0.8rem;
+        }
+        .source-badge {
+            font-size: 0.7rem;
+            padding: 0.25em 0.6em;
+        }
+        .semantic-badge {
+            background-color: #dc3545 !important;
+        }
+        .crossref-badge {
+            background-color: #17a2b8 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-brain me-2"></i>Word2Vec Analysis Tool
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('projects') }}">
+                    <i class="fas fa-folder me-1"></i>Projects
+                </a>
+                <a class="nav-link text-white active" href="{{ url_for('literature_search') }}">
+                    <i class="fas fa-search me-1"></i>Literature
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user me-1"></i>Profile
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-search me-2"></i>Free Literature Search & Paper Collection
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Search Form -->
+                        <form id="searchForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="searchQuery" class="form-label">Search Query</label>
+                                    <input type="text" class="form-control" id="searchQuery" 
+                                           placeholder="e.g., 'machine learning natural language processing'" 
+                                           required>
+                                    <div class="form-text">Enter keywords, phrases, or research topics</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="maxResults" class="form-label">Max Results</label>
+                                    <input type="number" class="form-control" id="maxResults" 
+                                           value="50" min="1" max="5000">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="yearRange" class="form-label">Year Range</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="startYear" 
+                                               placeholder="Start" min="1900" max="2025">
+                                        <span class="input-group-text">to</span>
+                                        <input type="number" class="form-control" id="endYear" 
+                                               placeholder="End" min="1900" max="2025" value="2025">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="includeArxiv" checked>
+                                        <label class="form-check-label" for="includeArxiv">
+                                            <i class="fas fa-book-open text-success me-1"></i>arXiv
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="includeSemantic" checked>
+                                        <label class="form-check-label" for="includeSemantic">
+                                            <i class="fas fa-graduation-cap text-danger me-1"></i>Semantic Scholar
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="includeCrossref" checked>
+                                        <label class="form-check-label" for="includeCrossref">
+                                            <i class="fas fa-university text-info me-1"></i>CrossRef
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-success" role="alert">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Free Search Engines:</strong> This system uses free academic search APIs 
+                                (arXiv, Semantic Scholar, and CrossRef) - no API keys required!
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="searchBtn">
+                                <i class="fas fa-search me-2"></i>Search Literature
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-newspaper me-2"></i>Search Results
+                            <span id="resultsCount" class="badge bg-primary ms-2">0</span>
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-success me-2" 
+                                    id="selectAllBtn" onclick="selectAllPapers()">
+                                <i class="fas fa-check-square me-1"></i>Select All
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    id="deselectAllBtn" onclick="deselectAllPapers()">
+                                <i class="fas fa-times-circle me-1"></i>Deselect All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="resultsContainer">
+                        <div class="text-center py-5" id="noResults">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Enter a search query to find research papers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Selected Papers -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-list me-2"></i>Selected Papers
+                            <span id="selectedCount" class="badge bg-success ms-2">0</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="selectedPapers" class="mb-3">
+                            <div class="text-muted text-center py-3" id="noSelectedPapers">
+                                No papers selected yet
+                            </div>
+                        </div>
+                        
+                        <!-- Project Selection -->
+                        <div class="mb-3">
+                            <label for="projectSelect" class="form-label">Save to Project</label>
+                            <select class="form-select" id="projectSelect">
+                                <option value="">Create new project...</option>
+                                <!-- Projects will be loaded here -->
+                            </select>
+                        </div>
+                        
+                        <!-- New Project Form (hidden by default) -->
+                        <div id="newProjectForm" style="display: none;">
+                            <div class="mb-3">
+                                <label for="newProjectName" class="form-label">New Project Name</label>
+                                <input type="text" class="form-control" id="newProjectName" 
+                                       placeholder="Enter project name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="newProjectDesc" class="form-label">Description</label>
+                                <textarea class="form-control" id="newProjectDesc" 
+                                          rows="2" placeholder="Optional description"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" id="downloadBtn" onclick="downloadPapers()" 
+                                    disabled>
+                                <i class="fas fa-download me-2"></i>Download Selected Papers
+                            </button>
+                            <button class="btn btn-primary" id="processBtn" onclick="processPapers()" 
+                                    disabled style="display: none;">
+                                <i class="fas fa-cogs me-2"></i>Process for Word2Vec
+                            </button>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3" role="alert">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                <strong>Note:</strong> PDF download success depends on open access availability. 
+                                arXiv papers are most likely to download successfully.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Indicator -->
+                <div class="card progress-container" id="progressCard">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Processing
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" id="progressBar"></div>
+                        </div>
+                        <div class="text-center">
+                            <p id="progressMessage">Starting download...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Paper Details -->
+    <div class="modal fade" id="paperModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paperModalTitle">Paper Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="paperModalBody">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script>
+        let allPapers = [];
+        let selectedPapers = new Set();
+        let currentProjectId = null;
+
+        // Initialize
+        $(document).ready(function() {
+            loadProjects();
+            
+            $('#searchForm').submit(function(e) {
+                e.preventDefault();
+                performSearch();
+            });
+            
+            $('#projectSelect').change(function() {
+                if ($(this).val() === '') {
+                    $('#newProjectForm').show();
+                } else {
+                    $('#newProjectForm').hide();
+                    currentProjectId = $(this).val();
+                }
+                updateButtons();
+            });
+        });
+
+        function loadProjects() {
+            $.ajax({
+                url: '/api/projects/list',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const select = $('#projectSelect');
+                        select.find('option:not(:first)').remove();
+                        
+                        response.projects.forEach(project => {
+                            select.append(`<option value="${project.id}">${project.project_name}</option>`);
+                        });
+                    }
+                },
+                error: function() {
+                    console.error('Failed to load projects');
+                }
+            });
+        }
+
+        function performSearch() {
+            const query = $('#searchQuery').val().trim();
+            const maxResults = $('#maxResults').val();
+            const startYear = $('#startYear').val();
+            const endYear = $('#endYear').val();
+            const includeArxiv = $('#includeArxiv').is(':checked');
+            const includeSemantic = $('#includeSemantic').is(':checked');
+            const includeCrossref = $('#includeCrossref').is(':checked');
+            
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+            
+            $('#searchBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Searching...');
+            
+            $.ajax({
+                url: '/api/literature/search',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    query: query,
+                    max_results: parseInt(maxResults),
+                    start_year: startYear ? parseInt(startYear) : null,
+                    end_year: endYear ? parseInt(endYear) : null,
+                    include_arxiv: includeArxiv,
+                    include_semantic: includeSemantic,
+                    include_crossref: includeCrossref
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        displayResults(response.papers);
+                        allPapers = response.papers;
+                        
+                        // Update results count
+                        $('#resultsCount').text(response.total_count)
+                            .removeClass('bg-primary bg-success bg-danger bg-info bg-warning')
+                            .addClass('bg-primary');
+                        
+                        // Show success message
+                        if (response.message) {
+                            console.log(response.message);
+                        }
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function(xhr) {
+                    alert('Search failed. Please try again.');
+                },
+                complete: function() {
+                    $('#searchBtn').prop('disabled', false)
+                        .html('<i class="fas fa-search me-2"></i>Search Literature');
+                }
+            });
+        }
+
+        function displayResults(papers) {
+            const container = $('#resultsContainer');
+            const noResults = $('#noResults');
+            
+            if (papers.length === 0) {
+                noResults.show();
+                container.find('.paper-card').remove();
+                return;
+            }
+            
+            noResults.hide();
+            container.find('.paper-card').remove();
+            
+            papers.forEach((paper, index) => {
+                const abstract = paper.abstract || 'No abstract available';
+                const isAbstractLong = abstract.length > 200;
+                const displayAbstract = isAbstractLong ? abstract.substring(0, 200) + '...' : abstract;
+                
+                const authors = Array.isArray(paper.authors) 
+                    ? paper.authors.join(', ') 
+                    : (paper.authors || 'Unknown');
+                
+                // Determine badge color based on source
+                let sourceBadgeClass = 'bg-secondary';
+                let sourceName = paper.source || 'unknown';
+                
+                if (sourceName === 'arxiv') {
+                    sourceBadgeClass = 'bg-success';
+                } else if (sourceName === 'semantic_scholar') {
+                    sourceBadgeClass = 'bg-danger semantic-badge';
+                } else if (sourceName === 'crossref') {
+                    sourceBadgeClass = 'bg-info crossref-badge';
+                }
+                
+                // Format source name for display
+                let displaySource = sourceName;
+                if (sourceName === 'semantic_scholar') {
+                    displaySource = 'Semantic Scholar';
+                } else if (sourceName === 'crossref') {
+                    displaySource = 'CrossRef';
+                } else {
+                    displaySource = sourceName.charAt(0).toUpperCase() + sourceName.slice(1);
+                }
+                
+                const card = $(`
+                    <div class="card paper-card mb-3 ${paper.source}" id="paper-${index}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="card-title mb-2 flex-grow-1">${paper.title}</h6>
+                                <div class="form-check ms-3">
+                                    <input class="form-check-input paper-checkbox" type="checkbox" 
+                                           data-index="${index}" onchange="togglePaperSelection(${index})">
+                                </div>
+                            </div>
+                            
+                            <p class="card-text small text-muted mb-2">
+                                <i class="fas fa-users me-1"></i>${authors}
+                            </p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge ${sourceBadgeClass} source-badge">
+                                    ${displaySource}
+                                </span>
+                                <span class="text-muted small">
+                                    ${paper.publication_year || paper.published || 'Unknown year'}
+                                </span>
+                            </div>
+                            
+                            <div class="abstract-text" id="abstract-${index}">
+                                <p class="card-text small">${displayAbstract}</p>
+                                ${isAbstractLong ? '<span class="read-more small" onclick="toggleAbstract(' + index + ')">Read more</span>' : ''}
+                            </div>
+                            
+                            <div class="mt-3">
+                                ${paper.doi ? `<span class="badge bg-info me-2 stats-badge">DOI: ${paper.doi.substring(0, 20)}...</span>` : ''}
+                                ${paper.cited_by ? `<span class="badge bg-warning me-2 stats-badge"><i class="fas fa-quote-right me-1"></i>${paper.cited_by}</span>` : ''}
+                                ${paper.journal ? `<span class="badge bg-secondary stats-badge">${paper.journal}</span>` : ''}
+                                ${paper.pdf_url ? `<span class="badge bg-success stats-badge"><i class="fas fa-file-pdf me-1"></i>PDF Available</span>` : ''}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-outline-info" onclick="showPaperDetails(${index})">
+                                    <i class="fas fa-info-circle me-1"></i>Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                
+                container.append(card);
+            });
+        }
+
+        function toggleAbstract(index) {
+            const abstractDiv = $(`#abstract-${index}`);
+            const abstractText = allPapers[index].abstract;
+            const readMoreSpan = abstractDiv.find('.read-more');
+            
+            if (abstractDiv.hasClass('expanded')) {
+                abstractDiv.removeClass('expanded');
+                abstractDiv.find('p').text(abstractText.substring(0, 200) + '...');
+                readMoreSpan.text('Read more');
+            } else {
+                abstractDiv.addClass('expanded');
+                abstractDiv.find('p').text(abstractText);
+                readMoreSpan.text('Show less');
+            }
+        }
+
+        function togglePaperSelection(index) {
+            const paper = allPapers[index];
+            const checkbox = $(`input[data-index="${index}"]`);
+            
+            if (checkbox.is(':checked')) {
+                selectedPapers.add(index);
+                $(`#paper-${index}`).addClass('selected-paper');
+            } else {
+                selectedPapers.delete(index);
+                $(`#paper-${index}`).removeClass('selected-paper');
+            }
+            
+            updateSelectedPapersList();
+            updateButtons();
+        }
+
+        function selectAllPapers() {
+            allPapers.forEach((_, index) => {
+                selectedPapers.add(index);
+                $(`input[data-index="${index}"]`).prop('checked', true);
+                $(`#paper-${index}`).addClass('selected-paper');
+            });
+            updateSelectedPapersList();
+            updateButtons();
+        }
+
+        function deselectAllPapers() {
+            selectedPapers.clear();
+            $('.paper-checkbox').prop('checked', false);
+            $('.paper-card').removeClass('selected-paper');
+            updateSelectedPapersList();
+            updateButtons();
+        }
+
+        function updateSelectedPapersList() {
+            const container = $('#selectedPapers');
+            const noSelected = $('#noSelectedPapers');
+            const count = selectedPapers.size;
+            
+            $('#selectedCount').text(count);
+            
+            if (count === 0) {
+                container.find('.selected-paper-item').remove();
+                noSelected.show();
+                return;
+            }
+            
+            noSelected.hide();
+            container.find('.selected-paper-item').remove();
+            
+            Array.from(selectedPapers).slice(0, 10).forEach(index => {
+                const paper = allPapers[index];
+                const item = $(`
+                    <div class="selected-paper-item mb-2 p-2 border rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small flex-grow-1 text-truncate" title="${paper.title}">
+                                ${paper.title.substring(0, 50)}...
+                            </span>
+                            <button class="btn btn-sm btn-outline-danger ms-2" 
+                                    onclick="removeSelectedPaper(${index})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="small text-muted">
+                            <span class="badge ${paper.source === 'arxiv' ? 'bg-success' : paper.source === 'semantic_scholar' ? 'bg-danger' : 'bg-info'} source-badge">
+                                ${paper.source}
+                            </span> • ${paper.publication_year || 'Unknown year'}
+                        </div>
+                    </div>
+                `);
+                container.append(item);
+            });
+            
+            if (count > 10) {
+                container.append(`
+                    <div class="text-center small text-muted">
+                        + ${count - 10} more papers selected
+                    </div>
+                `);
+            }
+        }
+
+        function removeSelectedPaper(index) {
+            selectedPapers.delete(index);
+            $(`input[data-index="${index}"]`).prop('checked', false);
+            $(`#paper-${index}`).removeClass('selected-paper');
+            updateSelectedPapersList();
+            updateButtons();
+        }
+
+        function updateButtons() {
+            const hasSelected = selectedPapers.size > 0;
+            const hasProject = $('#projectSelect').val() !== '';
+            
+            $('#downloadBtn').prop('disabled', !hasSelected);
+            $('#processBtn').toggle(hasProject && hasSelected);
+        }
+
+        function showPaperDetails(index) {
+            const paper = allPapers[index];
+            
+            // Format source for display
+            let displaySource = paper.source || 'unknown';
+            if (displaySource === 'semantic_scholar') {
+                displaySource = 'Semantic Scholar';
+            } else if (displaySource === 'crossref') {
+                displaySource = 'CrossRef';
+            } else {
+                displaySource = displaySource.charAt(0).toUpperCase() + displaySource.slice(1);
+            }
+            
+            let details = `
+                <h5>${paper.title}</h5>
+                <p><strong>Authors:</strong> ${Array.isArray(paper.authors) ? paper.authors.join(', ') : paper.authors}</p>
+                <p><strong>Source:</strong> <span class="badge ${paper.source === 'arxiv' ? 'bg-success' : paper.source === 'semantic_scholar' ? 'bg-danger' : 'bg-info'}">${displaySource}</span></p>
+                <p><strong>Year:</strong> ${paper.publication_year || paper.published || 'Unknown'}</p>
+            `;
+            
+            if (paper.doi) {
+                details += `<p><strong>DOI:</strong> ${paper.doi}</p>`;
+            }
+            
+            if (paper.journal) {
+                details += `<p><strong>Journal/Venue:</strong> ${paper.journal}</p>`;
+            }
+            
+            if (paper.cited_by) {
+                details += `<p><strong>Citations:</strong> ${paper.cited_by}</p>`;
+            }
+            
+            if (paper.pdf_url) {
+                details += `<p><strong>PDF URL:</strong> <a href="${paper.pdf_url}" target="_blank">${paper.pdf_url.substring(0, 50)}...</a></p>`;
+            }
+            
+            if (paper.abstract) {
+                details += `<div class="mt-3"><strong>Abstract:</strong><p class="mt-2">${paper.abstract}</p></div>`;
+            }
+            
+            $('#paperModalTitle').text('Paper Details');
+            $('#paperModalBody').html(details);
+            new bootstrap.Modal(document.getElementById('paperModal')).show();
+        }
+
+        function downloadPapers() {
+            if (selectedPapers.size === 0) {
+                alert('Please select at least one paper to download');
+                return;
+            }
+            
+            const projectId = $('#projectSelect').val();
+            if (!projectId) {
+                const newProjectName = $('#newProjectName').val().trim();
+                if (!newProjectName) {
+                    alert('Please select a project or create a new one');
+                    return;
+                }
+                
+                // Create new project first
+                createNewProject(newProjectName, $('#newProjectDesc').val())
+                    .then(createdProjectId => {
+                        if (createdProjectId) {
+                            performDownload(createdProjectId);
+                        }
+                    });
+            } else {
+                performDownload(projectId);
+            }
+        }
+
+        function createNewProject(name, description) {
+            return new Promise((resolve) => {
+                $.ajax({
+                    url: '/projects/create',
+                    method: 'POST',
+                    data: {
+                        project_name: name,
+                        description: description,
+                        is_public: false
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            loadProjects();
+                            resolve(response.project_id);
+                        } else {
+                            alert('Error creating project: ' + response.error);
+                            resolve(null);
+                        }
+                    },
+                    error: function() {
+                        alert('Failed to create project');
+                        resolve(null);
+                    }
+                });
+            });
+        }
+
+        function performDownload(projectId) {
+            const selectedPaperData = Array.from(selectedPapers).map(index => allPapers[index]);
+            
+            $('#progressCard').show();
+            $('#progressBar').css('width', '0%');
+            $('#progressMessage').text('Starting download...');
+            
+            $.ajax({
+                url: '/api/literature/download',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    papers: selectedPaperData,
+                    project_id: projectId
+                }),
+                xhr: function() {
+                    const xhr = new XMLHttpRequest();
+                    xhr.addEventListener('progress', function(evt) {
+                        if (evt.lengthComputable) {
+                            const percentComplete = (evt.loaded / evt.total) * 100;
+                            $('#progressBar').css('width', percentComplete + '%');
+                        }
+                    });
+                    return xhr;
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#progressMessage').text(`Successfully downloaded ${response.downloaded} out of ${response.total} papers`);
+                        $('#progressBar').removeClass('progress-bar-animated')
+                                        .addClass('bg-success');
+                        
+                        // Show processing button
+                        currentProjectId = projectId;
+                        $('#processBtn').show();
+                        
+                        setTimeout(() => {
+                            $('#progressCard').hide();
+                            $('#progressBar').removeClass('bg-success')
+                                            .addClass('progress-bar-animated')
+                                            .css('width', '0%');
+                        }, 3000);
+                    } else {
+                        alert('Error: ' + response.error);
+                        $('#progressCard').hide();
+                    }
+                },
+                error: function(xhr) {
+                    alert('Download failed. Please try again.');
+                    $('#progressCard').hide();
+                }
+            });
+        }
+
+        function processPapers() {
+            if (!currentProjectId) {
+                alert('No project selected');
+                return;
+            }
+            
+            $('#progressCard').show();
+            $('#progressBar').css('width', '0%');
+            $('#progressMessage').text('Processing papers for Word2Vec training...');
+            
+            $.ajax({
+                url: '/api/literature/process_project',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    project_id: currentProjectId
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        $('#progressMessage').text('Successfully processed papers!');
+                        $('#progressBar').css('width', '100%')
+                                        .removeClass('progress-bar-animated')
+                                        .addClass('bg-success');
+                        
+                        setTimeout(() => {
+                            $('#progressCard').hide();
+                            $('#progressBar').removeClass('bg-success')
+                                            .addClass('progress-bar-animated')
+                                            .css('width', '0%');
+                            
+                            alert(`Papers processed successfully!\nVocabulary size: ${response.vocabulary_size}\nYou can now use these vectors in the analysis tools.`);
+                        }, 2000);
+                    } else {
+                        alert('Error: ' + response.error);
+                        $('#progressCard').hide();
+                    }
+                },
+                error: function(xhr) {
+                    alert('Processing failed. Please try again.');
+                    $('#progressCard').hide();
+                }
+            });
+        }
+    </script>
+</body>
+</html
