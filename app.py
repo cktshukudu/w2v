@@ -1300,6 +1300,14 @@ def create_project():
             
             project_id = cur.fetchone()[0]
             
+            # Create project directory
+            project_dir = os.path.join('projects', str(project_id))
+            papers_dir = os.path.join(project_dir, 'papers')
+            output_dir = os.path.join(project_dir, 'word2vec_output')
+            os.makedirs(project_dir, exist_ok=True)
+            os.makedirs(papers_dir, exist_ok=True)
+            os.makedirs(output_dir, exist_ok=True)
+            
             # Log activity
             cur.execute("""
                 INSERT INTO user_activity (user_id, activity_type, description)
@@ -1460,6 +1468,11 @@ def delete_project(project_id):
             return jsonify({'success': False, 'error': 'Project not found'})
         
         project_name = project[0]
+        
+        # Delete project directory
+        project_dir = os.path.join('projects', str(project_id))
+        if os.path.exists(project_dir):
+            shutil.rmtree(project_dir, ignore_errors=True)
         
         # Delete all heatmaps in this project first
         cur.execute("DELETE FROM saved_heatmaps WHERE project_id = %s", (project_id,))
@@ -2745,7 +2758,9 @@ def api_literature_download():
                            (project_id, session['user_id']))
                 project = cur.fetchone()
                 if project:
-                    download_folder = os.path.join('projects', str(project_id), 'papers')
+                    project_dir = os.path.join('projects', str(project_id))
+                    download_folder = os.path.join(project_dir, 'papers')
+                    os.makedirs(download_folder, exist_ok=True)
                 cur.close()
                 conn.close()
         
@@ -2811,9 +2826,10 @@ def api_literature_download():
         print(f"Error downloading papers: {str(e)}")
         return jsonify({'error': f'Error downloading papers: {str(e)}'}), 500
 
-@app.route('/api/literature/process_project', methods=['POST'])
+# NEW: ADD THIS CRITICAL ROUTE FOR PROCESSING PAPERS FOR WORD2VEC
+@app.route('/api/literature/process_for_word2vec', methods=['POST'])
 @login_required
-def api_process_literature_project():
+def api_process_for_word2vec():
     """Process downloaded papers for Word2Vec training"""
     try:
         data = request.get_json()
@@ -2859,6 +2875,7 @@ def api_process_literature_project():
             text_files = []
             
             # Process each PDF
+            processed_count = 0
             for pdf_file in pdf_files:
                 try:
                     pdf_path = os.path.join(papers_folder, pdf_file)
@@ -2892,6 +2909,9 @@ def api_process_literature_project():
                         fp.write(text)
                     
                     text_files.append(txt_file_path)
+                    processed_count += 1
+                    
+                    print(f"Processed {pdf_file}")
                     
                 except Exception as e:
                     print(f"Error processing PDF {pdf_file}: {str(e)}")
@@ -2937,28 +2957,50 @@ def api_process_literature_project():
             try:
                 model = Word2Vec(sentences=tokenized_documents, vector_size=100, 
                                window=5, min_count=1, workers=4, sg=0)
+                print(f"Trained Word2Vec model with {len(model.wv.index_to_key)} words")
             except Exception as e:
                 shutil.rmtree(temp_dir, ignore_errors=True)
                 return jsonify({'error': f'Error training Word2Vec model: {str(e)}'}), 500
             
-            # Save model to project folder
-            model_path = os.path.join('projects', str(project_id), 'word2vec_model.model')
+            # Create project output directory
+            output_dir = os.path.join('projects', str(project_id), 'word2vec_output')
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Save model
+            model_path = os.path.join(output_dir, 'word2vec_model.model')
             model.save(model_path)
             
-            # Save word vectors
-            vectors_path = os.path.join('projects', str(project_id), 'word_vectors.emb')
+            # Save word vectors as .emb file
+            vectors_path = os.path.join(output_dir, 'word_vectors.emb')
             with open(vectors_path, 'w', encoding='utf-8') as emb_file:
                 emb_file.write(f"{len(model.wv.index_to_key)} {len(model.wv[model.wv.index_to_key[0]])}\n")
                 for word in model.wv.index_to_key:
                     vector_str = ' '.join(str(value) for value in model.wv[word])
                     emb_file.write(f"{word} {vector_str}\n")
             
+            # Extract phrases and save them
+            phrases_path = os.path.join(output_dir, 'phrases.csv')
+            try:
+                phrase_count_dict = extract_phrases(cleaned_text)
+                if phrase_count_dict:
+                    phrase_df = pd.DataFrame.from_dict(phrase_count_dict, orient='index', columns=['count'])
+                    phrase_df.sort_values('count', ascending=False, inplace=True)
+                    phrase_df.to_csv(phrases_path)
+                    print(f"Extracted {len(phrase_df)} phrases")
+            except Exception as e:
+                print(f"Error extracting phrases: {e}")
+            
+            # Save processed text for reference
+            text_path = os.path.join(output_dir, 'processed_text.txt')
+            with open(text_path, 'w', encoding='utf-8') as f:
+                f.write(cleaned_text[:100000])  # Save first 100k chars
+            
             # Log activity
             cur.execute("""
                 INSERT INTO user_activity (user_id, activity_type, description)
                 VALUES (%s, %s, %s)
-            """, (session['user_id'], 'literature_processing', 
-                 f'Processed {len(pdf_files)} papers from project: {project_name}'))
+            """, (session['user_id'], 'word2vec_processing', 
+                 f'Processed {processed_count} papers for Word2Vec in project: {project_name}'))
             
             conn.commit()
             
@@ -2967,20 +3009,23 @@ def api_process_literature_project():
             
             return jsonify({
                 'success': True,
-                'message': f'Successfully processed {len(pdf_files)} papers',
+                'message': f'Successfully processed {processed_count} papers and trained Word2Vec model',
                 'vocabulary_size': len(model.wv.index_to_key),
                 'model_path': model_path,
-                'vectors_path': vectors_path
+                'vectors_path': vectors_path,
+                'output_dir': output_dir
             })
             
         except Exception as e:
             conn.rollback()
-            return jsonify({'error': f'Error processing project: {str(e)}'}), 500
+            print(f"Error processing papers: {str(e)}")
+            return jsonify({'error': f'Error processing papers: {str(e)}'}), 500
         finally:
             cur.close()
             conn.close()
             
     except Exception as e:
+        print(f"Error in process_for_word2vec: {str(e)}")
         return jsonify({'error': f'Error processing request: {str(e)}'}), 500
     
 @app.route('/api/projects/list')
@@ -3017,4 +3062,10 @@ def api_projects_list():
 if __name__ == '__main__':
     # Initialize database on first run
     init_db()
+    
+    # Create necessary directories
+    os.makedirs('projects', exist_ok=True)
+    os.makedirs('uploads', exist_ok=True)
+    os.makedirs('downloads', exist_ok=True)
+    
     app.run(debug=True, host='0.0.0.0', port=5000)

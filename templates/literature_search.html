@@ -6,7 +6,6 @@
     <title>Literature Search - Word2Vec Analysis Tool</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
         .paper-card {
             transition: all 0.2s;
@@ -45,9 +44,6 @@
         .selected-paper {
             background-color: rgba(0, 123, 255, 0.1);
         }
-        .progress-container {
-            display: none;
-        }
         .stats-badge {
             font-size: 0.8rem;
         }
@@ -60,6 +56,9 @@
         }
         .crossref-badge {
             background-color: #17a2b8 !important;
+        }
+        .progress-container {
+            display: none;
         }
     </style>
 </head>
@@ -79,6 +78,9 @@
                 </a>
                 <a class="nav-link text-white active" href="{{ url_for('literature_search') }}">
                     <i class="fas fa-search me-1"></i>Literature
+                </a>
+                <a class="nav-link text-white" href="{{ url_for('visualize') }}">
+                    <i class="fas fa-chart-bar me-1"></i>Visualize
                 </a>
                 <a class="nav-link text-white" href="{{ url_for('profile') }}">
                     <i class="fas fa-user me-1"></i>Profile
@@ -246,7 +248,7 @@
                                     disabled>
                                 <i class="fas fa-download me-2"></i>Download Selected Papers
                             </button>
-                            <button class="btn btn-primary" id="processBtn" onclick="processPapers()" 
+                            <button class="btn btn-primary" id="processBtn" onclick="processPapersForWord2Vec()" 
                                     disabled style="display: none;">
                                 <i class="fas fa-cogs me-2"></i>Process for Word2Vec
                             </button>
@@ -298,6 +300,44 @@
         </div>
     </div>
 
+    <!-- Modal for Processing Success -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>Word2Vec Processing Complete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="successMessage">Successfully processed papers and trained Word2Vec model!</span>
+                    </div>
+                    
+                    <h6>Results:</h6>
+                    <ul>
+                        <li>Vocabulary Size: <span id="vocabSize">0</span> words</li>
+                        <li>Word vectors saved to: <code id="vectorsPath"></code></li>
+                        <li>Model saved to: <code id="modelPath"></code></li>
+                    </ul>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        You can now use these word vectors in the analysis tools to create heatmaps and visualize semantic relationships.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="goToVisualize()">
+                        <i class="fas fa-chart-bar me-2"></i>Go to Analysis Tools
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script>
@@ -320,6 +360,10 @@
                 } else {
                     $('#newProjectForm').hide();
                     currentProjectId = $(this).val();
+                    // Show process button if we have a project
+                    if (selectedPapers.size > 0) {
+                        $('#processBtn').show();
+                    }
                 }
                 updateButtons();
             });
@@ -384,10 +428,6 @@
                             .removeClass('bg-primary bg-success bg-danger bg-info bg-warning')
                             .addClass('bg-primary');
                         
-                        // Show success message
-                        if (response.message) {
-                            console.log(response.message);
-                        }
                     } else {
                         alert('Error: ' + response.error);
                     }
@@ -691,16 +731,33 @@
                         is_public: false
                     },
                     success: function(response) {
-                        if (response.success) {
+                        if (response.success || response.message) {
                             loadProjects();
-                            resolve(response.project_id);
+                            // Get the project ID from the response
+                            const projectId = response.project_id || response.heatmap_id;
+                            if (projectId) {
+                                resolve(projectId);
+                            } else {
+                                // If we don't have the ID, reload projects and find it
+                                setTimeout(() => {
+                                    loadProjects();
+                                    const select = $('#projectSelect');
+                                    select.val('');
+                                    select.find('option').each(function() {
+                                        if ($(this).text() === name) {
+                                            resolve($(this).val());
+                                        }
+                                    });
+                                    resolve(null);
+                                }, 500);
+                            }
                         } else {
-                            alert('Error creating project: ' + response.error);
+                            alert('Error creating project: ' + (response.error || 'Unknown error'));
                             resolve(null);
                         }
                     },
-                    error: function() {
-                        alert('Failed to create project');
+                    error: function(xhr) {
+                        alert('Failed to create project: ' + xhr.responseText);
                         resolve(null);
                     }
                 });
@@ -722,32 +779,36 @@
                     papers: selectedPaperData,
                     project_id: projectId
                 }),
-                xhr: function() {
-                    const xhr = new XMLHttpRequest();
-                    xhr.addEventListener('progress', function(evt) {
-                        if (evt.lengthComputable) {
-                            const percentComplete = (evt.loaded / evt.total) * 100;
-                            $('#progressBar').css('width', percentComplete + '%');
-                        }
-                    });
-                    return xhr;
-                },
                 success: function(response) {
                     if (response.success) {
-                        $('#progressMessage').text(`Successfully downloaded ${response.downloaded} out of ${response.total} papers`);
-                        $('#progressBar').removeClass('progress-bar-animated')
-                                        .addClass('bg-success');
-                        
-                        // Show processing button
-                        currentProjectId = projectId;
-                        $('#processBtn').show();
-                        
-                        setTimeout(() => {
-                            $('#progressCard').hide();
-                            $('#progressBar').removeClass('bg-success')
-                                            .addClass('progress-bar-animated')
-                                            .css('width', '0%');
-                        }, 3000);
+                        // Animate progress bar
+                        let progress = 0;
+                        const interval = setInterval(() => {
+                            progress += 10;
+                            $('#progressBar').css('width', progress + '%');
+                            
+                            if (progress >= 100) {
+                                clearInterval(interval);
+                                $('#progressMessage').html(`
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    Successfully downloaded ${response.downloaded} out of ${response.total} papers
+                                `);
+                                $('#progressBar').removeClass('progress-bar-animated')
+                                                .addClass('bg-success');
+                                
+                                setTimeout(() => {
+                                    $('#progressCard').hide();
+                                    $('#progressBar').removeClass('bg-success')
+                                                    .addClass('progress-bar-animated')
+                                                    .css('width', '0%');
+                                    
+                                    // Show processing button
+                                    currentProjectId = projectId;
+                                    $('#processBtn').show();
+                                    alert(`Downloaded ${response.downloaded} papers. You can now process them for Word2Vec.`);
+                                }, 3000);
+                            }
+                        }, 300);
                     } else {
                         alert('Error: ' + response.error);
                         $('#progressCard').hide();
@@ -760,18 +821,23 @@
             });
         }
 
-        function processPapers() {
+        // CRITICAL: FIXED FUNCTION TO PROCESS PAPERS FOR WORD2VEC
+        function processPapersForWord2Vec() {
             if (!currentProjectId) {
                 alert('No project selected');
                 return;
             }
             
+            if (!confirm('This will process all downloaded PDFs in the project folder to train a Word2Vec model. This may take several minutes depending on the number of papers. Continue?')) {
+                return;
+            }
+            
             $('#progressCard').show();
             $('#progressBar').css('width', '0%');
-            $('#progressMessage').text('Processing papers for Word2Vec training...');
+            $('#progressMessage').text('Starting Word2Vec processing...');
             
             $.ajax({
-                url: '/api/literature/process_project',
+                url: '/api/literature/process_for_word2vec',
                 method: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
@@ -779,30 +845,56 @@
                 }),
                 success: function(response) {
                     if (response.success) {
-                        $('#progressMessage').text('Successfully processed papers!');
-                        $('#progressBar').css('width', '100%')
-                                        .removeClass('progress-bar-animated')
-                                        .addClass('bg-success');
-                        
-                        setTimeout(() => {
-                            $('#progressCard').hide();
-                            $('#progressBar').removeClass('bg-success')
-                                            .addClass('progress-bar-animated')
-                                            .css('width', '0%');
+                        // Animate progress bar
+                        let progress = 0;
+                        const interval = setInterval(() => {
+                            progress += 10;
+                            $('#progressBar').css('width', progress + '%');
                             
-                            alert(`Papers processed successfully!\nVocabulary size: ${response.vocabulary_size}\nYou can now use these vectors in the analysis tools.`);
-                        }, 2000);
+                            if (progress >= 100) {
+                                clearInterval(interval);
+                                $('#progressMessage').html(`
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    Successfully processed papers and trained Word2Vec model!
+                                `);
+                                $('#progressBar').removeClass('progress-bar-animated')
+                                                .addClass('bg-success');
+                                
+                                setTimeout(() => {
+                                    $('#progressCard').hide();
+                                    $('#progressBar').removeClass('bg-success')
+                                                    .addClass('progress-bar-animated')
+                                                    .css('width', '0%');
+                                    
+                                    // Show success modal
+                                    showSuccessModal(response);
+                                }, 3000);
+                            }
+                        }, 300);
                     } else {
                         alert('Error: ' + response.error);
                         $('#progressCard').hide();
                     }
                 },
                 error: function(xhr) {
-                    alert('Processing failed. Please try again.');
+                    alert('Processing failed. Please try again. Error: ' + xhr.responseText);
                     $('#progressCard').hide();
                 }
             });
         }
+
+        function showSuccessModal(response) {
+            $('#successMessage').text(response.message);
+            $('#vocabSize').text(response.vocabulary_size);
+            $('#vectorsPath').text(response.vectors_path);
+            $('#modelPath').text(response.model_path);
+            
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+        }
+
+        function goToVisualize() {
+            window.location.href = '/visualize';
+        }
     </script>
 </body>
-</html
+</html>
