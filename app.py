@@ -16,7 +16,7 @@ import zipfile
 import tempfile
 import string
 import json
-from io import StringIO
+from io import StringIO, BytesIO
 import base64
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -27,23 +27,35 @@ from datetime import datetime, timedelta
 import secrets
 import time
 import random
+import signal
+import threading
 from typing import Dict, List, Tuple, Any
+import openpyxl
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import traceback
 
-# Import our new scraper
+# Import scraper
 from scraper import PaperScraper
 
 # Download required NLTK data
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
+nltk.download('averaged_perceptron_tagger', quiet=True)
 
 app = Flask(__name__)
+
+# ============= CONFIGURATION =============
+# Increase file upload limits
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB max file size
+app.config['MAX_FORM_MEMORY_SIZE'] = 1024 * 1024 * 1024  # 1GB for form data
 app.config['ALLOWED_EXTENSIONS'] = {'txt', 'pdf', 'emb', 'csv'}
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
+app.config['SESSION_TIMEOUT'] = 7200  # 2 hours in seconds
 
-# Custom stopwords
+# Custom stopwords (exactly like notebook)
 custom_stopwords = [
     "keywords", "keyword", "abstract", "doi", "authors", "author", "journal", "Abstract", "Authors", "Keywords",
     "http", "elsevier", "api", "sciencedirect", "available", "www", "ieee", "proceeding", "american", "vol",
@@ -66,6 +78,7 @@ except OSError:
     download("en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
+# ============= DATABASE FUNCTIONS =============
 def get_db_connection():
     """Get database connection"""
     try:
@@ -175,6 +188,7 @@ def init_db():
         cur.close()
         conn.close()
 
+# ============= DECORATORS =============
 def login_required(f):
     """Decorator to require login for routes"""
     from functools import wraps
@@ -187,15 +201,51 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ============= VALIDATION FUNCTIONS =============
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+def validate_file_sizes(files):
+    """
+    Validate file sizes and provide clear feedback
+    """
+    total_size = 0
+    max_total_size = 1024 * 1024 * 1024  # 1GB total
+    max_file_size = 500 * 1024 * 1024    # 500MB per file
+    
+    large_files = []
+    for file in files:
+        # Save position and get size
+        pos = file.tell()
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(pos)  # Reset file pointer
+        
+        total_size += size
+        
+        if size > max_file_size:
+            large_files.append({
+                'name': file.filename,
+                'size': f"{size / (1024*1024):.2f}MB",
+                'max': f"{max_file_size / (1024*1024):.0f}MB"
+            })
+    
+    if large_files:
+        error_msg = "Some files exceed the size limit:\n" + \
+                   "\n".join([f"  • {f['name']} ({f['size']} > {f['max']})" for f in large_files])
+        return False, error_msg
+    
+    if total_size > max_total_size:
+        return False, f"Total upload size ({total_size/(1024*1024):.2f}MB) exceeds limit of {max_total_size/(1024*1024):.0f}MB"
+    
+    return True, f"Total size: {total_size/(1024*1024):.2f}MB"
+
 def validate_csv_file(file_path):
     """Validate CSV file before processing"""
-    MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-    MAX_LINES = 500000  # Maximum lines to process
+    MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
+    MAX_LINES = 1000000  # Maximum lines to process
     
     file_size = os.path.getsize(file_path)
     
@@ -212,8 +262,9 @@ def validate_csv_file(file_path):
     
     return True
 
+# ============= TEXT PROCESSING FUNCTIONS =============
 def preprocess_text(text):
-    """Preprocess text by removing URLs, tokenizing, and cleaning"""
+    """Preprocess text exactly like the notebook"""
     # Remove URLs
     text = re.sub(r'https?://\S+', '', text)
     # Convert text to lowercase
@@ -228,10 +279,10 @@ def preprocess_text(text):
     words = [lemmatizer.lemmatize(word) for word in words]  
     return ' '.join(words)
 
-def extract_phrases(text, max_phrase_length=3):
-    """Extract phrases from text using spaCy"""
+def extract_phrases_spacy(text, max_phrase_length=3):
+    """Extract phrases from text using spaCy (exactly like notebook)"""
     # Process the text with spaCy
-    doc = nlp(text)
+    doc = nlp(text[:1000000])  # Limit to 1M chars for performance
     
     # Create a dictionary to store phrase counts
     phrase_count_dict = {}
@@ -256,6 +307,16 @@ def extract_phrases(text, max_phrase_length=3):
     
     return phrase_count_dict
 
+def preprocess_for_word2vec(text):
+    """Preprocess text for Word2Vec tokenization"""
+    words = nltk.word_tokenize(text.lower())
+    # Remove numbers, dates, and special characters
+    words = [word for word in words if word.isalnum() and not word.isnumeric()]
+    words = [word for word in words if word not in stopwords.words('english')]
+    words = [lemmatizer.lemmatize(word) for word in words]
+    return words
+
+# ============= VECTOR FUNCTIONS =============
 def parse_emb_file(file_path):
     """Parse .emb file and return word vectors dictionary"""
     word_vectors = {}
@@ -289,8 +350,35 @@ def calculate_cosine_similarity(vec1, vec2):
         return 0
     return dot_product / (norm1 * norm2)
 
+# ============= CSV CATEGORY FUNCTIONS =============
+def is_valid_word(word):
+    """Check if a word is valid for processing"""
+    if not word or word.lower() in ['nan', 'null', 'none', '']:
+        return False
+    
+    # Remove quotes and extra spaces
+    word = word.strip().strip('"').strip("'")
+    
+    # Skip purely numeric words
+    if word.isdigit():
+        return False
+    
+    # Skip words that are just punctuation or special characters
+    if not any(char.isalpha() for char in word):
+        return False
+    
+    # Skip very short words (unless they're acronyms)
+    if len(word) < 2 and not word.isupper():
+        return False
+    
+    # Skip common data artifacts
+    if word.lower() in ['na', 'n/a', '#n/a', 'undefined']:
+        return False
+    
+    return True
+
 def parse_csv_categories(file_path):
-    """Parse CSV file and extract categories with their words - with better cleaning"""
+    """Parse CSV file and extract categories with their words"""
     categories = {}
     
     try:
@@ -304,7 +392,7 @@ def parse_csv_categories(file_path):
         
         # If file is too large, use chunked reading
         file_size = os.path.getsize(file_path)
-        use_chunks = file_size > 10 * 1024 * 1024  # 10MB threshold
+        use_chunks = file_size > 50 * 1024 * 1024  # 50MB threshold
         
         if use_chunks:
             print(f"Large file detected ({file_size/1024/1024:.2f}MB), using chunked processing...")
@@ -428,37 +516,11 @@ def parse_csv_categories(file_path):
     
     return categories
 
-def is_valid_word(word):
-    """Check if a word is valid for processing"""
-    if not word or word.lower() in ['nan', 'null', 'none', '']:
-        return False
-    
-    # Remove quotes and extra spaces
-    word = word.strip().strip('"').strip("'")
-    
-    # Skip purely numeric words
-    if word.isdigit():
-        return False
-    
-    # Skip words that are just punctuation or special characters
-    if not any(char.isalpha() for char in word):
-        return False
-    
-    # Skip very short words (unless they're acronyms)
-    if len(word) < 2 and not word.isupper():
-        return False
-    
-    # Skip common data artifacts
-    if word.lower() in ['na', 'n/a', '#n/a', 'undefined']:
-        return False
-    
-    return True
-
 def parse_csv_line_by_line(file_path):
-    """Fallback CSV parser that processes line by line with better filtering"""
+    """Fallback CSV parser that processes line by line"""
     categories = {}
     line_count = 0
-    max_lines = 100000  # Safety limit
+    max_lines = 500000  # Safety limit
     
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
@@ -493,6 +555,7 @@ def parse_csv_line_by_line(file_path):
     
     return categories
 
+# ============= HEATMAP FUNCTIONS =============
 def create_heatmap_image(words_x, words_y, matrix, category_x, category_y, stats):
     """Create a high-quality heatmap image"""
     # Dimensions
@@ -948,14 +1011,20 @@ def create_multi_heatmap_image(words_x, words_y, matrix,
     
     return image
 
+# ============= ERROR HANDLERS =============
 @app.errorhandler(413)
 def too_large(e):
-    return jsonify({'error': 'File too large. Maximum file size is 100MB.'}), 413
+    return jsonify({'error': 'File too large. Maximum file size is 500MB per file, 1GB total.'}), 413
 
 @app.errorhandler(500)
 def internal_error(e):
     return jsonify({'error': 'Internal server error occurred.'}), 500
 
+@app.errorhandler(408)
+def timeout_error(e):
+    return jsonify({'error': 'Request timeout. The file may be too large or processing took too long.'}), 408
+
+# ============= ROUTES =============
 @app.route('/')
 def index():
     """Home page - public landing page with login option"""
@@ -999,7 +1068,7 @@ def upload_page():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Login page - now the landing page"""
+    """Login page"""
     # If user is already logged in, redirect to dashboard
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
@@ -1542,13 +1611,24 @@ def profile():
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload_files():
-    """Handle file upload and processing - now requires login"""
+    """Handle file upload and processing - with improved error handling"""
+    
+    # Check if files exist
     if 'files' not in request.files:
         return jsonify({'error': 'No files selected'}), 400
     
     files = request.files.getlist('files')
     if not files or files[0].filename == '':
         return jsonify({'error': 'No files selected'}), 400
+    
+    # Validate file sizes
+    is_valid, message = validate_file_sizes(files)
+    if not is_valid:
+        return jsonify({'error': message}), 413
+    
+    # Create progress tracking
+    total_files = len(files)
+    processed_files = 0
     
     # Create temporary directory for processing
     temp_dir = tempfile.mkdtemp()
@@ -1566,44 +1646,72 @@ def upload_files():
                 file_path = os.path.join(temp_dir, filename)
                 file.save(file_path)
                 
+                # Update progress
+                processed_files += 1
+                
                 # Process PDF files to extract text
                 if filename.lower().endswith('.pdf'):
                     try:
-                        pdf = pdfplumber.open(file_path)
-                        text = ""
+                        # Check file size before processing
+                        file_size = os.path.getsize(file_path)
+                        if file_size == 0:
+                            print(f"{filename} has zero-byte size and will be skipped.")
+                            continue
                         
-                        # Iterate through each page of the PDF
-                        for page in pdf.pages:
-                            # Extract text from the page
-                            page_text = page.extract_text()
+                        # Process with timeout for large files
+                        def timeout_handler(signum, frame):
+                            raise TimeoutError("PDF processing timed out")
+                        
+                        # Set timeout based on file size
+                        timeout_seconds = 300  # 5 minutes default
+                        if file_size > 50 * 1024 * 1024:  # >50MB
+                            timeout_seconds = 600  # 10 minutes
+                        
+                        # Use threading timer instead of signal (which doesn't work on Windows)
+                        timer = threading.Timer(timeout_seconds, lambda: (_ for _ in ()).throw(TimeoutError("PDF processing timed out")))
+                        timer.start()
+                        
+                        try:
+                            pdf = pdfplumber.open(file_path)
+                            text = ""
                             
-                            # Perform OCR on scanned pages
-                            if not page_text or not page_text.strip():
-                                try:
-                                    page_image = page.to_image()
-                                    page_text = pytesseract.image_to_string(page_image.original)
-                                except:
-                                    page_text = ""
+                            # Process pages
+                            total_pages = len(pdf.pages)
+                            for page_num, page in enumerate(pdf.pages):
+                                # Extract text from the page
+                                page_text = page.extract_text()
+                                
+                                # Perform OCR on scanned pages
+                                if not page_text or not page_text.strip():
+                                    try:
+                                        page_image = page.to_image()
+                                        page_text = pytesseract.image_to_string(page_image.original)
+                                    except:
+                                        page_text = ""
+                                
+                                text += page_text + "\n"
                             
-                            text += page_text + "\n"
-                        
-                        # Close the PDF
-                        pdf.close()
-                        
-                        # Exclude headers and footers
-                        text = '\n'.join(line for line in text.splitlines() if not line.startswith(('Page ', 'Chapter ', 'Title ')))
-                        
-                        # Save as text file
-                        txt_filename = os.path.splitext(filename)[0] + '.txt'
-                        txt_file_path = os.path.join(temp_dir, txt_filename)
-                        with open(txt_file_path, 'w', encoding='utf-8') as fp:
-                            fp.write(text)
-                        
-                        text_files.append(txt_file_path)
+                            pdf.close()
+                            timer.cancel()
+                            
+                            # Save as text file
+                            txt_filename = os.path.splitext(filename)[0] + '.txt'
+                            txt_file_path = os.path.join(temp_dir, txt_filename)
+                            with open(txt_file_path, 'w', encoding='utf-8') as fp:
+                                fp.write(text)
+                            
+                            text_files.append(txt_file_path)
+                            
+                        except TimeoutError:
+                            timer.cancel()
+                            return jsonify({'error': f'PDF processing timed out for {filename}'}), 408
+                        except Exception as e:
+                            timer.cancel()
+                            print(f"Error processing PDF {filename}: {str(e)}")
+                            continue
                         
                     except Exception as e:
                         print(f"Error processing PDF {filename}: {str(e)}")
-                        # Continue with other files
                         continue
                 
                 # Directly use text files
@@ -1613,6 +1721,15 @@ def upload_files():
         if not text_files:
             shutil.rmtree(temp_dir, ignore_errors=True)
             return jsonify({'error': 'No valid text files found after processing'}), 400
+        
+        # Check total text size
+        total_text_size = 0
+        for txt_file in text_files:
+            total_text_size += os.path.getsize(txt_file)
+        
+        if total_text_size > 500 * 1024 * 1024:  # 500MB text limit
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return jsonify({'error': f'Total extracted text size ({total_text_size/(1024*1024):.2f}MB) exceeds limit'}), 413
         
         # Merge all text files
         merged_text = ""
@@ -1632,12 +1749,12 @@ def upload_files():
             shutil.rmtree(temp_dir, ignore_errors=True)
             return jsonify({'error': 'No readable text content found in files'}), 400
         
-        # Clean the merged text
+        # Clean the merged text (like notebook)
         documents = merged_text.splitlines()
         cleaned_documents = [preprocess_text(doc) for doc in documents if doc.strip()]
         cleaned_text = '\n'.join(cleaned_documents)
         
-        # Tokenize for Word2Vec
+        # Tokenize for Word2Vec (like notebook)
         tokenized_documents = []
         for doc in cleaned_documents:
             words = nltk.word_tokenize(doc.lower())
@@ -1652,25 +1769,30 @@ def upload_files():
             shutil.rmtree(temp_dir, ignore_errors=True)
             return jsonify({'error': 'No valid tokens found after preprocessing'}), 400
         
-        # Train Word2Vec model
+        # Train Word2Vec model with notebook parameters
         try:
-            model = Word2Vec(sentences=tokenized_documents, vector_size=100, window=5, min_count=1, workers=4, sg=0)
+            model = Word2Vec(
+                sentences=tokenized_documents, 
+                vector_size=300,  # Like notebook
+                window=5,         # Like notebook
+                min_count=1,      # Like notebook
+                workers=4, 
+                sg=0              # CBOW like notebook
+            )
         except Exception as e:
             shutil.rmtree(temp_dir, ignore_errors=True)
             return jsonify({'error': f'Error training Word2Vec model: {str(e)}'}), 500
         
-        # Extract phrases
+        # Extract phrases (like notebook)
         all_phrases = {}
-        MIN_PHRASE_LENGTH = 2
         MAX_PHRASE_LENGTH = 4
-        MIN_PHRASE_COUNT = 2
         
         for doc in tokenized_documents:
             for i in range(len(doc)):
                 for j in range(i, min(i + MAX_PHRASE_LENGTH, len(doc))):
                     phrase = ' '.join(doc[i:j+1])
                     
-                    if len(phrase) < MIN_PHRASE_LENGTH:
+                    if len(phrase.split()) < 2:
                         continue
                     
                     if all(word in stopwords.words('english') for word in doc[i:j+1]):
@@ -1680,6 +1802,7 @@ def upload_files():
         
         # Filter phrases
         filtered_phrases = {}
+        MIN_PHRASE_COUNT = 2
         for phrase, count in all_phrases.items():
             if count >= MIN_PHRASE_COUNT and len(phrase.split()) <= MAX_PHRASE_LENGTH:
                 filtered_phrases[phrase] = count
@@ -1688,15 +1811,27 @@ def upload_files():
         phrase_df = pd.DataFrame.from_dict(filtered_phrases, orient='index', columns=['count'])
         phrase_df.sort_values('count', inplace=True, ascending=False)
         
-        # Limit to top 1000 phrases
-        MAX_PHRASES = 1000
-        if len(phrase_df) > MAX_PHRASES:
-            phrase_df = phrase_df.head(MAX_PHRASES)
-        
         # Create word vectors
         word_vectors = {}
         for word in model.wv.index_to_key:
             word_vectors[word] = model.wv[word]
+        
+        # Create phrase vectors (average of word vectors)
+        phrase_vectors = {}
+        unique_phrases = list(filtered_phrases.keys())
+        for phrase in unique_phrases[:1000]:  # Limit to top 1000 phrases
+            phrase_words = phrase.split()
+            # Get vectors for words in phrase
+            vectors = []
+            for word in phrase_words:
+                if word in model.wv:
+                    vectors.append(model.wv[word])
+            if vectors:
+                phrase_vector = sum(vectors) / len(vectors)
+                phrase_vectors[phrase.replace(' ', '_')] = phrase_vector
+        
+        # Combine word and phrase vectors
+        combined_vectors = {**word_vectors, **phrase_vectors}
         
         # Create output files
         output_dir = os.path.join(temp_dir, 'output')
@@ -1706,19 +1841,29 @@ def upload_files():
         phrase_csv_path = os.path.join(output_dir, 'phrase_counts.csv')
         phrase_df.to_csv(phrase_csv_path)
         
-        # Save word vectors
+        # Save word vectors in Word2Vec format
         vectors_path = os.path.join(output_dir, 'word_vectors.emb')
         with open(vectors_path, 'w', encoding='utf-8') as emb_file:
-            emb_file.write(f"{len(word_vectors)} {len(next(iter(word_vectors.values())))}\n")
-            for word, vector in word_vectors.items():
-                vector_str = ' '.join(str(value) for value in vector)
-                emb_file.write(f"{word} {vector_str}\n")
+            if combined_vectors:
+                first_vector = next(iter(combined_vectors.values()))
+                vector_dim = len(first_vector)
+                emb_file.write(f"{len(combined_vectors)} {vector_dim}\n")
+                
+                for word_or_phrase, vector in combined_vectors.items():
+                    vector_str = ' '.join(f"{x:.6f}" for x in vector)
+                    emb_file.write(f"{word_or_phrase} {vector_str}\n")
+        
+        # Save cleaned text
+        cleaned_path = os.path.join(output_dir, 'cleaned_text.txt')
+        with open(cleaned_path, 'w', encoding='utf-8') as f:
+            f.write(cleaned_text[:500000])  # Save first 500k chars
         
         # Create zip file
         zip_path = os.path.join(temp_dir, 'word2vec_results.zip')
         with zipfile.ZipFile(zip_path, 'w') as zipf:
             zipf.write(phrase_csv_path, 'phrase_counts.csv')
             zipf.write(vectors_path, 'word_vectors.emb')
+            zipf.write(cleaned_path, 'cleaned_text.txt')
         
         # Log user activity
         conn = get_db_connection()
@@ -1753,6 +1898,7 @@ def upload_files():
     except Exception as e:
         # Clean up on any unexpected error
         shutil.rmtree(temp_dir, ignore_errors=True)
+        traceback.print_exc()
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 @app.route('/analyze')
@@ -2052,25 +2198,26 @@ def generate_heatmap():
         if not words_x or not words_y:
             return jsonify({'error': 'One or both categories are empty'}), 400
         
+        # Limit number of words to prevent memory issues
+        max_words = 50
+        if len(words_x) > max_words:
+            words_x = words_x[:max_words]
+        if len(words_y) > max_words:
+            words_y = words_y[:max_words]
+        
         # Check if all words exist in vector space
         all_words = words_x + words_y
         missing_words = [word for word in all_words if word not in word_vectors]
         
         if missing_words:
-            # Show first 10 missing words for debugging
-            missing_sample = missing_words[:10]
-            print(f"Missing words in vector space: {missing_sample}")
-            
             # Filter out missing words
             words_x = [word for word in words_x if word in word_vectors]
             words_y = [word for word in words_y if word in word_vectors]
             
             if not words_x or not words_y:
                 return jsonify({
-                    'error': f'No valid words found after filtering. Missing: {", ".join(missing_sample)}'
+                    'error': f'No valid words found after filtering. Sample missing: {", ".join(missing_words[:5])}'
                 }), 404
-            
-            print(f"Filtered words_x: {len(words_x)} words, words_y: {len(words_y)} words")
         
         # Calculate similarity matrix
         matrix = []
@@ -2099,8 +2246,8 @@ def generate_heatmap():
         stats = {
             'min': min(all_similarities),
             'max': max(all_similarities),
-            'mean': np.mean(all_similarities),
-            'std': np.std(all_similarities)
+            'mean': float(np.mean(all_similarities)),
+            'std': float(np.std(all_similarities))
         }
         
         # Normalize matrix if requested
@@ -2117,8 +2264,8 @@ def generate_heatmap():
             stats = {
                 'min': 0.0,
                 'max': 1.0,
-                'mean': np.mean([item for row in matrix for item in row]),
-                'std': np.std([item for row in matrix for item in row])
+                'mean': float(np.mean([item for row in matrix for item in row])),
+                'std': float(np.std([item for row in matrix for item in row]))
             }
         
         # Create heatmap image
@@ -2163,6 +2310,7 @@ def generate_heatmap():
         
     except Exception as e:
         print(f"Error generating heatmap: {str(e)}")
+        traceback.print_exc()
         return jsonify({'error': f'Error generating heatmap: {str(e)}'}), 500
 
 @app.route('/heatmap/generate_multi', methods=['POST'])
@@ -2203,6 +2351,8 @@ def generate_multi_heatmap():
                 category_words = categories[category]
                 # Filter words that exist in vector space
                 valid_words = [word for word in category_words if word in word_vectors]
+                # Limit words per category
+                valid_words = valid_words[:20]
                 words_x.extend(valid_words)
                 category_labels_x.extend([category] * len(valid_words))
         
@@ -2212,6 +2362,8 @@ def generate_multi_heatmap():
                 category_words = categories[category]
                 # Filter words that exist in vector space
                 valid_words = [word for word in category_words if word in word_vectors]
+                # Limit words per category
+                valid_words = valid_words[:20]
                 words_y.extend(valid_words)
                 category_labels_y.extend([category] * len(valid_words))
         
@@ -2245,8 +2397,8 @@ def generate_multi_heatmap():
         stats = {
             'min': min(all_similarities),
             'max': max(all_similarities),
-            'mean': np.mean(all_similarities),
-            'std': np.std(all_similarities)
+            'mean': float(np.mean(all_similarities)),
+            'std': float(np.std(all_similarities))
         }
         
         # Normalize matrix if requested
@@ -2263,8 +2415,8 @@ def generate_multi_heatmap():
             stats = {
                 'min': 0.0,
                 'max': 1.0,
-                'mean': np.mean([item for row in matrix for item in row]),
-                'std': np.std([item for row in matrix for item in row])
+                'mean': float(np.mean([item for row in matrix for item in row])),
+                'std': float(np.std([item for row in matrix for item in row]))
             }
         
         # Create heatmap image with category labels
@@ -2315,6 +2467,7 @@ def generate_multi_heatmap():
         
     except Exception as e:
         print(f"Error generating multi-category heatmap: {str(e)}")
+        traceback.print_exc()
         return jsonify({'error': f'Error generating heatmap: {str(e)}'}), 500
 
 @app.route('/heatmap/save', methods=['POST'])
@@ -2361,7 +2514,7 @@ def save_heatmap():
                 INSERT INTO saved_heatmaps (project_id, heatmap_name, category_x, category_y, words_x, words_y, similarity_matrix)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, (project_id, heatmap_name, category_x, category_y, words_x, words_y, json.dumps(matrix)))
+            """, (project_id, heatmap_name, category_x, category_y, json.dumps(words_x), json.dumps(words_y), json.dumps(matrix)))
             
             heatmap_id = cur.fetchone()[0]
             
@@ -2431,7 +2584,7 @@ def save_heatmap_to_project():
                 INSERT INTO saved_heatmaps (project_id, heatmap_name, category_x, category_y, words_x, words_y, similarity_matrix)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, (project_id, heatmap_name, category_x, category_y, words_x, words_y, json.dumps(matrix)))
+            """, (project_id, heatmap_name, category_x, category_y, json.dumps(words_x), json.dumps(words_y), json.dumps(matrix)))
             
             heatmap_id = cur.fetchone()[0]
             
@@ -2611,7 +2764,7 @@ def download_all_heatmap():
 
 @app.route('/heatmap/preview/<int:heatmap_id>')
 def heatmap_preview(heatmap_id):
-    """Public heatmap preview page - REMOVED: Now redirects to login"""
+    """Public heatmap preview page"""
     flash('Please log in to view heatmaps.', 'info')
     return redirect(url_for('login', next=url_for('heatmap_preview', heatmap_id=heatmap_id)))
 
@@ -2826,11 +2979,10 @@ def api_literature_download():
         print(f"Error downloading papers: {str(e)}")
         return jsonify({'error': f'Error downloading papers: {str(e)}'}), 500
 
-# NEW: ADD THIS CRITICAL ROUTE FOR PROCESSING PAPERS FOR WORD2VEC
 @app.route('/api/literature/process_for_word2vec', methods=['POST'])
 @login_required
 def api_process_for_word2vec():
-    """Process downloaded papers for Word2Vec training"""
+    """Process downloaded papers for Word2Vec training using the exact logic from the notebook"""
     try:
         data = request.get_json()
         if not data:
@@ -2864,7 +3016,7 @@ def api_process_for_word2vec():
             if not os.path.exists(papers_folder):
                 return jsonify({'error': 'No papers found for this project'}), 404
             
-            # Process all PDFs in the folder
+            # Get all PDF files
             pdf_files = [f for f in os.listdir(papers_folder) if f.lower().endswith('.pdf')]
             
             if not pdf_files:
@@ -2874,19 +3026,26 @@ def api_process_for_word2vec():
             temp_dir = tempfile.mkdtemp()
             text_files = []
             
-            # Process each PDF
-            processed_count = 0
+            # STEP 1: Extract text from PDFs (exactly like notebook)
+            print("Step 1: Extracting text from PDFs...")
             for pdf_file in pdf_files:
                 try:
                     pdf_path = os.path.join(papers_folder, pdf_file)
+                    
+                    # Check file size (like notebook)
+                    file_size = os.path.getsize(pdf_path)
+                    if file_size == 0:
+                        print(f"{pdf_path} has zero-byte size and will be skipped.")
+                        continue
+                    
+                    # Extract text using pdfplumber (exactly like notebook)
                     pdf = pdfplumber.open(pdf_path)
                     text = ""
                     
-                    # Extract text from each page
                     for page in pdf.pages:
                         page_text = page.extract_text()
                         
-                        # Perform OCR on scanned pages
+                        # OCR for scanned pages (exactly like notebook)
                         if not page_text or not page_text.strip():
                             try:
                                 page_image = page.to_image()
@@ -2894,11 +3053,11 @@ def api_process_for_word2vec():
                             except:
                                 page_text = ""
                         
-                        text += page_text + "\n"
+                        text += page_text
                     
                     pdf.close()
                     
-                    # Exclude headers and footers
+                    # Exclude headers and footers (exactly like notebook)
                     text = '\n'.join(line for line in text.splitlines() 
                                    if not line.startswith(('Page ', 'Chapter ', 'Title ')))
                     
@@ -2909,116 +3068,231 @@ def api_process_for_word2vec():
                         fp.write(text)
                     
                     text_files.append(txt_file_path)
-                    processed_count += 1
-                    
-                    print(f"Processed {pdf_file}")
+                    print(f"  Processed {pdf_file}")
                     
                 except Exception as e:
-                    print(f"Error processing PDF {pdf_file}: {str(e)}")
+                    print(f"Error processing {pdf_file}: {e}")
                     continue
             
             if not text_files:
                 shutil.rmtree(temp_dir, ignore_errors=True)
                 return jsonify({'error': 'No valid text extracted from PDFs'}), 400
             
-            # Merge all text files
-            merged_text = ""
+            # STEP 2: Merge all text files (exactly like notebook)
+            print("Step 2: Merging text files...")
+            is_txt_file = []
             for txt_file in text_files:
+                if txt_file.endswith('.txt'):
+                    is_txt_file.append(txt_file)
+            
+            # Create merged file
+            merged_file_path = os.path.join(temp_dir, 'merged_file.txt')
+            with open(merged_file_path, 'w', encoding='utf-8') as merged:
+                for file in is_txt_file:
+                    with open(file, encoding='utf-8') as infile:
+                        contents = infile.read()
+                        merged.write(contents)
+            
+            # STEP 3: Clean and preprocess text (exactly like notebook)
+            print("Step 3: Cleaning and preprocessing text...")
+            
+            # Read merged file
+            with open(merged_file_path, 'r', encoding='utf-8') as file:
+                documents = file.read().splitlines()
+            
+            # Preprocess all documents
+            cleaned_documents = [preprocess_text(doc) for doc in documents if doc.strip()]
+            
+            # Write cleaned documents
+            cleaned_file_path = os.path.join(temp_dir, 'merged_file2.txt')
+            with open(cleaned_file_path, 'w', encoding='utf-8') as new_file:
+                new_file.write('\n'.join(cleaned_documents))
+            
+            # STEP 4: Extract phrases (using spaCy like notebook)
+            print("Step 4: Extracting phrases...")
+            
+            max_phrase_length = 3
+            dfs = []
+            
+            # Process each text file for phrases
+            for filename in text_files:
                 try:
-                    with open(txt_file, 'r', encoding='utf-8') as f:
-                        merged_text += f.read() + "\n"
-                except:
+                    with open(filename, 'r', encoding='utf-8') as f:
+                        raw_txt = f.read()
+                    
+                    # Process with spaCy
+                    phrase_count_dict = extract_phrases_spacy(raw_txt, max_phrase_length)
+                    
+                    # Convert to DataFrame
+                    if phrase_count_dict:
+                        df = pd.DataFrame.from_dict(phrase_count_dict, orient='index', columns=['count'])
+                        df.sort_values('count', inplace=True, ascending=False)
+                        dfs.append(df)
+                except Exception as e:
+                    print(f"Error extracting phrases from {filename}: {e}")
                     continue
             
-            if not merged_text.strip():
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                return jsonify({'error': 'No readable text content found'}), 400
+            # Combine all phrase DataFrames
+            if dfs:
+                result_df = pd.concat(dfs)
+                result_df = result_df.groupby(result_df.index).sum()
+                result_df.sort_values('count', ascending=False, inplace=True)
+                
+                # Save phrase counts
+                phrase_csv_path = os.path.join(temp_dir, 'AI_tools.csv')
+                result_df.to_csv(phrase_csv_path, index=True)
+                print(f"  Saved {len(result_df)} phrases")
             
-            # Clean the text
-            documents = merged_text.splitlines()
-            cleaned_documents = [preprocess_text(doc) for doc in documents if doc.strip()]
-            cleaned_text = '\n'.join(cleaned_documents)
+            # STEP 5: Train Word2Vec model (exactly like notebook)
+            print("Step 5: Training Word2Vec model...")
             
-            # Tokenize for Word2Vec
+            # Read cleaned file
+            with open(cleaned_file_path, 'r', encoding='utf-8') as file:
+                documents = file.read().splitlines()
+            
+            # Tokenize documents
             tokenized_documents = []
-            for doc in cleaned_documents:
-                words = nltk.word_tokenize(doc.lower())
-                words = [word for word in words if word.isalnum() and not word.isnumeric()]
-                words = [word for word in words if word not in stopwords.words('english')]
-                words = [lemmatizer.lemmatize(word) for word in words]
-                if words:
-                    tokenized_documents.append(words)
+            for doc in documents:
+                if doc.strip():
+                    words = preprocess_for_word2vec(doc)
+                    if words:
+                        tokenized_documents.append(words)
             
-            if not tokenized_documents:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                return jsonify({'error': 'No valid tokens found after preprocessing'}), 400
+            # Create list of all words and phrases (up to 3 words)
+            all_phrases = []
+            for doc in tokenized_documents:
+                for i in range(len(doc)):
+                    for j in range(i, min(i + 3, len(doc))):
+                        phrase = ' '.join(doc[i:j+1])
+                        all_phrases.append(phrase)
             
-            # Train Word2Vec model
-            try:
-                model = Word2Vec(sentences=tokenized_documents, vector_size=100, 
-                               window=5, min_count=1, workers=4, sg=0)
-                print(f"Trained Word2Vec model with {len(model.wv.index_to_key)} words")
-            except Exception as e:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                return jsonify({'error': f'Error training Word2Vec model: {str(e)}'}), 500
+            # Save phrases to Excel (in chunks like notebook)
+            chunk_size = 1000000
+            num_chunks = len(all_phrases) // chunk_size + 1
+            
+            phrases_excel_path = os.path.join(temp_dir, 'phrases.xlsx')
+            with pd.ExcelWriter(phrases_excel_path, engine='openpyxl') as writer:
+                for i in range(min(num_chunks, 10)):  # Limit to 10 chunks max
+                    start_idx = i * chunk_size
+                    end_idx = min((i + 1) * chunk_size, len(all_phrases))
+                    chunk_df = pd.DataFrame({'Phrases': all_phrases[start_idx:end_idx]})
+                    sheet_name = f'Sheet_{i + 1}'
+                    chunk_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            print(f"  Saved {len(all_phrases)} words and phrases to phrases.xlsx")
+            
+            # Train Word2Vec model with notebook parameters
+            model = Word2Vec(
+                sentences=tokenized_documents, 
+                vector_size=300, 
+                window=5, 
+                min_count=1, 
+                sg=0  # CBOW (exactly like notebook)
+            )
+            
+            # Create unique words list
+            unique_words = list(set(word for doc in tokenized_documents for word in doc))
+            
+            # Create unique phrases (with underscores)
+            unique_phrases = []
+            for doc in tokenized_documents:
+                for i in range(len(doc)):
+                    for j in range(i, min(i + 3, len(doc))):
+                        phrase = '_'.join(doc[i:j+1])
+                        unique_phrases.append(phrase)
+            
+            # Create word vectors dictionary
+            word_vectors = {}
+            for word in unique_words:
+                if word in model.wv:
+                    word_vectors[word] = model.wv[word].tolist()
+            
+            # Create phrase vectors (average of word vectors)
+            phrase_vectors = {}
+            for phrase in unique_phrases:
+                phrase_words = phrase.split('_')
+                # Get vectors for words in phrase
+                vectors = []
+                for word in phrase_words:
+                    if word in model.wv:
+                        vectors.append(model.wv[word])
+                if vectors:
+                    phrase_vector = sum(vectors) / len(vectors)
+                    phrase_vectors[phrase] = phrase_vector.tolist()
+            
+            # Combine word and phrase vectors
+            combined_vectors = {**word_vectors, **phrase_vectors}
+            
+            # Save vectors in Word2Vec format
+            vectors_path = os.path.join(temp_dir, 'AI.emb')
+            with open(vectors_path, 'w', encoding='utf-8') as emb_file:
+                if combined_vectors:
+                    first_vector = next(iter(combined_vectors.values()))
+                    vector_dim = len(first_vector)
+                    emb_file.write(f"{len(combined_vectors)} {vector_dim}\n")
+                    
+                    for word_or_phrase, vector in combined_vectors.items():
+                        vector_str = ' '.join(f"{x:.6f}" for x in vector)
+                        emb_file.write(f"{word_or_phrase} {vector_str}\n")
+            
+            print(f"  Saved {len(combined_vectors)} word and phrase vectors to AI.emb")
             
             # Create project output directory
             output_dir = os.path.join('projects', str(project_id), 'word2vec_output')
             os.makedirs(output_dir, exist_ok=True)
             
+            # Copy all output files to project directory
+            import shutil
+            
+            # Copy merged files
+            shutil.copy2(merged_file_path, os.path.join(output_dir, 'merged_file.txt'))
+            shutil.copy2(cleaned_file_path, os.path.join(output_dir, 'merged_file2.txt'))
+            
+            # Copy phrase files
+            if 'phrase_csv_path' in locals() and os.path.exists(phrase_csv_path):
+                shutil.copy2(phrase_csv_path, os.path.join(output_dir, 'phrase_counts.csv'))
+            
+            # Copy phrases Excel
+            shutil.copy2(phrases_excel_path, os.path.join(output_dir, 'phrases.xlsx'))
+            
+            # Copy vectors
+            shutil.copy2(vectors_path, os.path.join(output_dir, 'word_vectors.emb'))
+            
             # Save model
-            model_path = os.path.join(output_dir, 'word2vec_model.model')
+            model_path = os.path.join(output_dir, 'word2vec.model')
             model.save(model_path)
-            
-            # Save word vectors as .emb file
-            vectors_path = os.path.join(output_dir, 'word_vectors.emb')
-            with open(vectors_path, 'w', encoding='utf-8') as emb_file:
-                emb_file.write(f"{len(model.wv.index_to_key)} {len(model.wv[model.wv.index_to_key[0]])}\n")
-                for word in model.wv.index_to_key:
-                    vector_str = ' '.join(str(value) for value in model.wv[word])
-                    emb_file.write(f"{word} {vector_str}\n")
-            
-            # Extract phrases and save them
-            phrases_path = os.path.join(output_dir, 'phrases.csv')
-            try:
-                phrase_count_dict = extract_phrases(cleaned_text)
-                if phrase_count_dict:
-                    phrase_df = pd.DataFrame.from_dict(phrase_count_dict, orient='index', columns=['count'])
-                    phrase_df.sort_values('count', ascending=False, inplace=True)
-                    phrase_df.to_csv(phrases_path)
-                    print(f"Extracted {len(phrase_df)} phrases")
-            except Exception as e:
-                print(f"Error extracting phrases: {e}")
-            
-            # Save processed text for reference
-            text_path = os.path.join(output_dir, 'processed_text.txt')
-            with open(text_path, 'w', encoding='utf-8') as f:
-                f.write(cleaned_text[:100000])  # Save first 100k chars
             
             # Log activity
             cur.execute("""
                 INSERT INTO user_activity (user_id, activity_type, description)
                 VALUES (%s, %s, %s)
             """, (session['user_id'], 'word2vec_processing', 
-                 f'Processed {processed_count} papers for Word2Vec in project: {project_name}'))
+                 f'Processed {len(pdf_files)} papers with notebook logic in project: {project_name}'))
             
             conn.commit()
             
-            # Clean up
+            # Clean up temp directory
             shutil.rmtree(temp_dir, ignore_errors=True)
             
             return jsonify({
                 'success': True,
-                'message': f'Successfully processed {processed_count} papers and trained Word2Vec model',
-                'vocabulary_size': len(model.wv.index_to_key),
-                'model_path': model_path,
-                'vectors_path': vectors_path,
-                'output_dir': output_dir
+                'message': f'Successfully processed {len(pdf_files)} papers using notebook logic',
+                'vocabulary_size': len(model.wv),
+                'phrase_count': len(result_df) if 'result_df' in locals() else 0,
+                'vector_count': len(combined_vectors),
+                'output_dir': output_dir,
+                'files': {
+                    'vectors': os.path.join(output_dir, 'word_vectors.emb'),
+                    'model': os.path.join(output_dir, 'word2vec.model'),
+                    'phrases': os.path.join(output_dir, 'phrases.xlsx'),
+                    'phrase_counts': os.path.join(output_dir, 'phrase_counts.csv')
+                }
             })
             
         except Exception as e:
             conn.rollback()
             print(f"Error processing papers: {str(e)}")
+            traceback.print_exc()
             return jsonify({'error': f'Error processing papers: {str(e)}'}), 500
         finally:
             cur.close()
@@ -3026,6 +3300,7 @@ def api_process_for_word2vec():
             
     except Exception as e:
         print(f"Error in process_for_word2vec: {str(e)}")
+        traceback.print_exc()
         return jsonify({'error': f'Error processing request: {str(e)}'}), 500
     
 @app.route('/api/projects/list')
@@ -3068,4 +3343,5 @@ if __name__ == '__main__':
     os.makedirs('uploads', exist_ok=True)
     os.makedirs('downloads', exist_ok=True)
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Run with increased timeout
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)

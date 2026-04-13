@@ -23,6 +23,20 @@
             border-color: #007bff;
             background-color: #e3f2fd;
         }
+        .progress {
+            height: 30px;
+        }
+        .file-size-warning {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .limit-badge {
+            background-color: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #495057;
+        }
     </style>
 </head>
 <body>
@@ -43,7 +57,7 @@
                     <i class="fas fa-user me-1"></i>Profile
                 </a>
                 <a class="nav-link text-white" href="{{ url_for('literature_search') }}">
-                <i class="fas fa-search me-1"></i>Literature
+                    <i class="fas fa-search me-1"></i>Literature
                 </a>
                 <a class="nav-link text-white" href="{{ url_for('logout') }}">
                     <i class="fas fa-sign-out-alt me-1"></i>Logout
@@ -57,10 +71,13 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">
                             <i class="fas fa-upload me-2"></i>Upload Files for Word2Vec Training
                         </h4>
+                        <div class="limit-badge">
+                            <i class="fas fa-info-circle me-1"></i>Max: 500MB per file, 1GB total
+                        </div>
                     </div>
                     <div class="card-body">
                         <p class="lead">Upload PDF or text files to train your Word2Vec models and extract word embeddings.</p>
@@ -85,6 +102,7 @@
                         </div>
 
                         <div id="uploadProgress" class="mt-3"></div>
+                        <div id="sizeInfo" class="file-size-warning mt-2"></div>
                     </div>
                 </div>
             </div>
@@ -115,7 +133,7 @@
                     <div class="card-body text-center">
                         <i class="fas fa-project-diagram fa-2x text-success mb-3"></i>
                         <h6>Word2Vec Training</h6>
-                        <p class="small text-muted">Custom Word2Vec model training with phrase extraction</p>
+                        <p class="small text-muted">300-dimensional vectors with phrase detection</p>
                     </div>
                 </div>
             </div>
@@ -129,7 +147,12 @@
         const fileList = document.getElementById('fileList');
         const uploadButton = document.getElementById('uploadButton');
         const uploadProgress = document.getElementById('uploadProgress');
+        const sizeInfo = document.getElementById('sizeInfo');
         let selectedFiles = [];
+
+        // File size limits
+        const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+        const MAX_TOTAL_SIZE = 1024 * 1024 * 1024; // 1GB
 
         // Drag and drop functionality
         uploadArea.addEventListener('dragover', (e) => {
@@ -155,6 +178,44 @@
             selectedFiles = Array.from(files);
             updateFileList();
             updateUploadButton();
+            updateSizeInfo();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateSizeInfo() {
+            if (selectedFiles.length === 0) {
+                sizeInfo.innerHTML = '';
+                return;
+            }
+
+            let totalSize = 0;
+            let oversizedFiles = [];
+            
+            selectedFiles.forEach(file => {
+                totalSize += file.size;
+                if (file.size > MAX_FILE_SIZE) {
+                    oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
+                }
+            });
+
+            let html = `<strong>Total size:</strong> ${formatFileSize(totalSize)}`;
+            
+            if (totalSize > MAX_TOTAL_SIZE) {
+                html += ` <span class="text-danger">(Exceeds 1GB limit!)</span>`;
+            }
+            
+            if (oversizedFiles.length > 0) {
+                html += `<br><span class="text-danger">Files exceeding 500MB limit:<br>${oversizedFiles.join('<br>')}</span>`;
+            }
+            
+            sizeInfo.innerHTML = html;
         }
 
         function updateFileList() {
@@ -165,11 +226,16 @@
 
             let html = '<h6>Selected Files:</h6><div class="list-group">';
             selectedFiles.forEach((file, index) => {
+                const fileSize = formatFileSize(file.size);
+                const isOversized = file.size > MAX_FILE_SIZE;
+                const fileIcon = file.name.endsWith('.pdf') ? 'text-danger' : 'text-primary';
+                
                 html += `
                     <div class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
-                            <i class="fas fa-file ${file.name.endsWith('.pdf') ? 'text-danger' : 'text-primary'} me-2"></i>
-                            ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                            <i class="fas fa-file ${fileIcon} me-2"></i>
+                            ${file.name} (${fileSize})
+                            ${isOversized ? '<span class="badge bg-danger ms-2">Too large</span>' : ''}
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
                             <i class="fas fa-times"></i>
@@ -185,10 +251,38 @@
             selectedFiles.splice(index, 1);
             updateFileList();
             updateUploadButton();
+            updateSizeInfo();
         }
 
         function updateUploadButton() {
-            uploadButton.disabled = selectedFiles.length === 0;
+            if (selectedFiles.length === 0) {
+                uploadButton.disabled = true;
+                return;
+            }
+
+            // Check file sizes
+            let totalSize = 0;
+            let validFiles = true;
+            
+            for (const file of selectedFiles) {
+                totalSize += file.size;
+                if (file.size > MAX_FILE_SIZE) {
+                    validFiles = false;
+                    break;
+                }
+            }
+            
+            if (totalSize > MAX_TOTAL_SIZE) {
+                validFiles = false;
+            }
+            
+            uploadButton.disabled = !validFiles;
+            
+            if (!validFiles) {
+                uploadButton.title = 'Some files exceed size limits';
+            } else {
+                uploadButton.title = '';
+            }
         }
 
         uploadButton.addEventListener('click', () => {
@@ -200,25 +294,43 @@
             });
 
             const spinner = uploadButton.querySelector('.fa-spinner');
+            const buttonText = uploadButton.innerHTML;
             uploadButton.disabled = true;
             spinner.classList.remove('d-none');
 
             uploadProgress.innerHTML = `
                 <div class="alert alert-info">
                     <i class="fas fa-sync fa-spin me-2"></i>
-                    Processing files and training Word2Vec model... This may take a few minutes.
+                    Processing ${selectedFiles.length} files (${formatFileSize(selectedFiles.reduce((a, b) => a + b.size, 0))})...<br>
+                    <small>This may take several minutes for large files. Training 300-dimensional vectors with phrase detection.</small>
+                </div>
+                <div class="progress mt-2">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
                 </div>
             `;
 
+            // Use AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3600000); // 60 minute timeout for large files
+
             fetch('/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             })
-            .then(response => {
+            .then(async response => {
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || 'Upload failed');
-                    });
+                    if (response.status === 413) {
+                        const data = await response.json().catch(() => ({}));
+                        throw new Error(data.error || 'File too large. Maximum total size is 1GB.');
+                    } else if (response.status === 408) {
+                        throw new Error('Processing timed out. Please try with fewer or smaller files.');
+                    } else {
+                        const data = await response.json().catch(() => ({}));
+                        throw new Error(data.error || `Upload failed (${response.status})`);
+                    }
                 }
                 return response.blob();
             })
@@ -236,21 +348,33 @@
                 uploadProgress.innerHTML = `
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i>
-                        Files processed successfully! Download started.
+                        Files processed successfully! Download started.<br>
+                        <small>The ZIP file contains: phrase counts CSV, word vectors (300-dim), and cleaned text.</small>
                     </div>
                 `;
             })
             .catch(error => {
-                uploadProgress.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error: ${error.message}
-                    </div>
-                `;
+                if (error.name === 'AbortError') {
+                    uploadProgress.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock me-2"></i>
+                            Request timed out after 60 minutes. The files may be too large or the server is busy.<br>
+                            Try with fewer or smaller files (max 500MB per file, 1GB total).
+                        </div>
+                    `;
+                } else {
+                    uploadProgress.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error: ${error.message}
+                        </div>
+                    `;
+                }
             })
             .finally(() => {
                 uploadButton.disabled = false;
                 spinner.classList.add('d-none');
+                uploadButton.innerHTML = buttonText;
             });
         });
     </script>
