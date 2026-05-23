@@ -1,0 +1,53 @@
+# Virtual Environment (THIS IS THE MAIN CULPRIT)
+venv/
+env/
+ENV/
+.venv/
+venv.bak/
+env.bak/
+
+# Python cache files (also cause similar warnings)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE files (often have line ending issues)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project-specific generated files (binary/large files)
+uploads/
+downloads/
+projects/
+*.pdf
+*.emb
+*.model
+*.bin
+*.zip
+*.tar.gz
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+*.cache

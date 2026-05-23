@@ -37,6 +37,26 @@
             font-size: 0.8rem;
             color: #495057;
         }
+        .file-item {
+            transition: background-color 0.2s;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+        }
+        .task-card {
+            transition: all 0.2s;
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .bg-gradient-progress {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
     </style>
 </head>
 <body>
@@ -70,13 +90,13 @@
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-white">
                         <h4 class="mb-0">
-                            <i class="fas fa-upload me-2"></i>Upload Files for Word2Vec Training
+                            <i class="fas fa-upload me-2 text-primary"></i>Upload Files for Word2Vec Training
                         </h4>
                         <div class="limit-badge">
-                            <i class="fas fa-info-circle me-1"></i>Max: 500MB per file, 1GB total
+                            <i class="fas fa-database me-1"></i>Max: 5GB per file, 5GB total
                         </div>
                     </div>
                     <div class="card-body">
@@ -85,9 +105,9 @@
                         <div class="upload-area" id="uploadArea">
                             <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                             <h5>Drop files here or click to browse</h5>
-                            <p class="text-muted">Supported formats: PDF, TXT</p>
+                            <p class="text-muted">Supported formats: PDF, TXT (up to 5GB each)</p>
                             <input type="file" id="fileInput" multiple accept=".pdf,.txt" style="display: none;">
-                            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            <button class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
                                 <i class="fas fa-folder-open me-2"></i>Select Files
                             </button>
                         </div>
@@ -97,8 +117,11 @@
                         <div class="mt-4">
                             <button id="uploadButton" class="btn btn-success btn-lg" disabled>
                                 <i class="fas fa-spinner fa-spin d-none me-2"></i>
-                                Process Files & Train Model
+                                Start Training (Background)
                             </button>
+                            <span class="ms-3 text-muted small">
+                                <i class="fas fa-clock"></i> Training continues even if you close the browser
+                            </span>
                         </div>
 
                         <div id="uploadProgress" class="mt-3"></div>
@@ -108,10 +131,30 @@
             </div>
         </div>
 
+        <!-- Active Training Tasks Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks me-2 text-info"></i>Active & Recent Training Tasks
+                        </h5>
+                    </div>
+                    <div class="card-body" id="activeTasksContainer">
+                        <div id="tasksList" class="d-flex flex-column gap-2">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin me-2"></i> Loading tasks...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Features -->
         <div class="row mt-4">
             <div class="col-md-4">
-                <div class="card">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body text-center">
                         <i class="fas fa-file-pdf fa-2x text-danger mb-3"></i>
                         <h6>PDF Processing</h6>
@@ -120,7 +163,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body text-center">
                         <i class="fas fa-cogs fa-2x text-primary mb-3"></i>
                         <h6>Text Preprocessing</h6>
@@ -129,7 +172,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body text-center">
                         <i class="fas fa-project-diagram fa-2x text-success mb-3"></i>
                         <h6>Word2Vec Training</h6>
@@ -138,23 +181,38 @@
                 </div>
             </div>
         </div>
+
+        <!-- Server configuration note -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-server me-2"></i>
+                    <strong>Background Processing Enabled:</strong> Once you start training, the task runs in the background. You can close the browser and come back later to download your results. Tasks are saved automatically.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 5GB limits
+        const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024;
+        const MAX_TOTAL_SIZE = 5 * 1024 * 1024 * 1024;
+
+        // DOM elements
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
         const uploadButton = document.getElementById('uploadButton');
         const uploadProgress = document.getElementById('uploadProgress');
         const sizeInfo = document.getElementById('sizeInfo');
+        const tasksList = document.getElementById('tasksList');
+        
         let selectedFiles = [];
+        let pollingInterval = null;
 
-        // File size limits
-        const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-        const MAX_TOTAL_SIZE = 1024 * 1024 * 1024; // 1GB
-
-        // Drag and drop functionality
+        // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -175,7 +233,10 @@
         });
 
         function handleFiles(files) {
-            selectedFiles = Array.from(files);
+            const newFiles = Array.from(files);
+            const existingNames = new Set(selectedFiles.map(f => `${f.name}|${f.size}`));
+            const uniqueNewFiles = newFiles.filter(f => !existingNames.has(`${f.name}|${f.size}`));
+            selectedFiles = [...selectedFiles, ...uniqueNewFiles];
             updateFileList();
             updateUploadButton();
             updateSizeInfo();
@@ -184,7 +245,7 @@
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
@@ -204,40 +265,47 @@
                     oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
                 }
             });
-
-            let html = `<strong>Total size:</strong> ${formatFileSize(totalSize)}`;
             
-            if (totalSize > MAX_TOTAL_SIZE) {
-                html += ` <span class="text-danger">(Exceeds 1GB limit!)</span>`;
+            let totalExceeds = totalSize > MAX_TOTAL_SIZE;
+            
+            let html = `<div class="alert alert-secondary py-2"><strong>📊 Summary:</strong> ${selectedFiles.length} file(s) | Total: ${formatFileSize(totalSize)}`;
+            
+            if (totalExceeds) {
+                html += ` <span class="badge bg-danger ms-2">Exceeds 5GB total limit!</span>`;
             }
-            
             if (oversizedFiles.length > 0) {
-                html += `<br><span class="text-danger">Files exceeding 500MB limit:<br>${oversizedFiles.join('<br>')}</span>`;
+                html += `<br><span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Files exceeding 5GB limit:<br>${oversizedFiles.join('<br>')}</span>`;
+            } else if (!totalExceeds && selectedFiles.length > 0) {
+                html += ` <span class="badge bg-success ms-2">Within limits ✓</span>`;
             }
+            html += `</div>`;
             
             sizeInfo.innerHTML = html;
         }
 
         function updateFileList() {
             if (selectedFiles.length === 0) {
-                fileList.innerHTML = '<p class="text-muted">No files selected</p>';
+                fileList.innerHTML = '<div class="alert alert-light text-center"><i class="fas fa-inbox me-2"></i>No files selected. Choose PDF or TXT files up to 5GB each.</div>';
                 return;
             }
 
-            let html = '<h6>Selected Files:</h6><div class="list-group">';
+            let html = '<h6 class="mb-3"><i class="fas fa-list me-2"></i>Selected Files:</h6><div class="list-group">';
             selectedFiles.forEach((file, index) => {
                 const fileSize = formatFileSize(file.size);
                 const isOversized = file.size > MAX_FILE_SIZE;
-                const fileIcon = file.name.endsWith('.pdf') ? 'text-danger' : 'text-primary';
+                const fileIcon = file.name.endsWith('.pdf') ? 'fa-file-pdf text-danger' : 'fa-file-alt text-primary';
                 
                 html += `
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-file ${fileIcon} me-2"></i>
-                            ${file.name} (${fileSize})
-                            ${isOversized ? '<span class="badge bg-danger ms-2">Too large</span>' : ''}
+                    <div class="list-group-item file-item d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="fas ${fileIcon} fa-lg me-3"></i>
+                            <div>
+                                <strong>${escapeHtml(file.name)}</strong><br>
+                                <small class="text-muted">${fileSize}</small>
+                                ${isOversized ? '<span class="badge bg-danger ms-2">Exceeds 5GB</span>' : ''}
+                            </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" onclick="removeFile(${index})" title="Remove file">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -246,136 +314,291 @@
             html += '</div>';
             fileList.innerHTML = html;
         }
+        
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
 
         function removeFile(index) {
             selectedFiles.splice(index, 1);
             updateFileList();
             updateUploadButton();
             updateSizeInfo();
+            if (selectedFiles.length === 0) {
+                uploadProgress.innerHTML = '';
+            }
         }
 
         function updateUploadButton() {
             if (selectedFiles.length === 0) {
                 uploadButton.disabled = true;
+                uploadButton.title = 'Select at least one file';
                 return;
             }
 
-            // Check file sizes
             let totalSize = 0;
             let validFiles = true;
+            let reason = '';
             
             for (const file of selectedFiles) {
                 totalSize += file.size;
                 if (file.size > MAX_FILE_SIZE) {
                     validFiles = false;
+                    reason = `File "${file.name}" exceeds 5GB limit`;
                     break;
                 }
             }
             
-            if (totalSize > MAX_TOTAL_SIZE) {
+            if (validFiles && totalSize > MAX_TOTAL_SIZE) {
                 validFiles = false;
+                reason = `Total size (${formatFileSize(totalSize)}) exceeds 5GB limit`;
             }
             
             uploadButton.disabled = !validFiles;
             
             if (!validFiles) {
-                uploadButton.title = 'Some files exceed size limits';
+                uploadButton.title = reason;
+                uploadButton.classList.add('opacity-50');
             } else {
-                uploadButton.title = '';
+                uploadButton.title = `Start background training for ${selectedFiles.length} file(s) (${formatFileSize(totalSize)})`;
+                uploadButton.classList.remove('opacity-50');
             }
         }
 
-        uploadButton.addEventListener('click', () => {
+        // Background task management
+        async function loadActiveTasks() {
+            try {
+                const response = await fetch('/api/training-tasks');
+                if (!response.ok) throw new Error('Failed to load tasks');
+                const tasks = await response.json();
+                renderTasks(tasks);
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                tasksList.innerHTML = `
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Unable to load training tasks. The server may be starting up.
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadActiveTasks()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTasks(tasks) {
+            if (!tasks || tasks.length === 0) {
+                tasksList.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No active or recent training tasks. Start a new training job above.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            tasks.forEach(task => {
+                const statusColor = task.status === 'completed' ? 'success' : 
+                                   task.status === 'failed' ? 'danger' : 
+                                   task.status === 'processing' ? 'primary' : 'secondary';
+                const statusIcon = task.status === 'completed' ? 'fa-check-circle' :
+                                  task.status === 'failed' ? 'fa-exclamation-circle' :
+                                  task.status === 'processing' ? 'fa-spinner fa-spin' : 'fa-clock';
+                
+                const progressPercent = task.progress || 0;
+                
+                html += `
+                    <div class="card task-card mb-2 border" data-task-id="${task.task_id}">
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <i class="fas ${statusIcon} text-${statusColor}"></i>
+                                        <strong>${escapeHtml(task.task_name || 'Training Task')}</strong>
+                                        <span class="badge bg-${statusColor} status-badge">${task.status.toUpperCase()}</span>
+                                    </div>
+                                    <div class="small text-muted mb-2">
+                                        <i class="fas fa-file-alt me-1"></i> ${task.file_count || 0} file(s) | 
+                                        <i class="fas fa-weight-hanging me-1"></i> ${task.total_size || '0 MB'} |
+                                        <i class="fas fa-calendar me-1"></i> Started: ${task.created_at || 'Just now'}
+                                    </div>
+                                    ${task.status === 'processing' ? `
+                                        <div class="progress mt-2" style="height: 8px;">
+                                            <div class="progress-bar bg-gradient-progress" role="progressbar" 
+                                                 style="width: ${progressPercent}%" 
+                                                 aria-valuenow="${progressPercent}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <div class="small text-muted mt-1">${task.current_step || 'Training in progress...'}</div>
+                                    ` : ''}
+                                    ${task.status === 'completed' && task.result_url ? `
+                                        <div class="mt-2">
+                                            <a href="${task.result_url}" class="btn btn-sm btn-success" download>
+                                                <i class="fas fa-download me-1"></i> Download Results
+                                            </a>
+                                            <small class="text-muted ms-2">Model saved permanently</small>
+                                        </div>
+                                    ` : ''}
+                                    ${task.status === 'failed' && task.error_message ? `
+                                        <div class="alert alert-danger alert-sm mt-2 py-1 small">
+                                            <i class="fas fa-bug me-1"></i> ${escapeHtml(task.error_message)}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="ms-2">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="checkTaskStatus('${task.task_id}')" title="Refresh status">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            tasksList.innerHTML = html;
+        }
+
+        async function checkTaskStatus(taskId) {
+            try {
+                const response = await fetch(`/api/training-tasks/${taskId}`);
+                if (!response.ok) throw new Error('Failed to check status');
+                const task = await response.json();
+                // Refresh the entire list to get latest
+                loadActiveTasks();
+                return task;
+            } catch (error) {
+                console.error('Error checking task status:', error);
+            }
+        }
+
+        // Start background training
+        async function startBackgroundTraining() {
             if (selectedFiles.length === 0) return;
+
+            // Validate sizes
+            let totalSize = 0;
+            for (const file of selectedFiles) {
+                if (file.size > MAX_FILE_SIZE) {
+                    showMessage(`File "${file.name}" exceeds 5GB limit.`, 'danger');
+                    return;
+                }
+                totalSize += file.size;
+            }
+            if (totalSize > MAX_TOTAL_SIZE) {
+                showMessage(`Total size (${formatFileSize(totalSize)}) exceeds 5GB limit.`, 'danger');
+                return;
+            }
 
             const formData = new FormData();
             selectedFiles.forEach(file => {
                 formData.append('files', file);
             });
 
-            const spinner = uploadButton.querySelector('.fa-spinner');
-            const buttonText = uploadButton.innerHTML;
+            // Disable button and show submitting state
             uploadButton.disabled = true;
-            spinner.classList.remove('d-none');
+            const originalText = uploadButton.innerHTML;
+            uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating background task...';
+            
+            try {
+                const response = await fetch('/api/start-background-training', {
+                    method: 'POST',
+                    body: formData
+                });
 
-            uploadProgress.innerHTML = `
-                <div class="alert alert-info">
-                    <i class="fas fa-sync fa-spin me-2"></i>
-                    Processing ${selectedFiles.length} files (${formatFileSize(selectedFiles.reduce((a, b) => a + b.size, 0))})...<br>
-                    <small>This may take several minutes for large files. Training 300-dimensional vectors with phrase detection.</small>
-                </div>
-                <div class="progress mt-2">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
-                </div>
-            `;
-
-            // Use AbortController for timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3600000); // 60 minute timeout for large files
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData,
-                signal: controller.signal
-            })
-            .then(async response => {
-                clearTimeout(timeoutId);
-                
                 if (!response.ok) {
-                    if (response.status === 413) {
-                        const data = await response.json().catch(() => ({}));
-                        throw new Error(data.error || 'File too large. Maximum total size is 1GB.');
-                    } else if (response.status === 408) {
-                        throw new Error('Processing timed out. Please try with fewer or smaller files.');
-                    } else {
-                        const data = await response.json().catch(() => ({}));
-                        throw new Error(data.error || `Upload failed (${response.status})`);
-                    }
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
                 }
-                return response.blob();
-            })
-            .then(blob => {
-                // Create download link
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = 'word2vec_results.zip';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
 
+                const result = await response.json();
+                
+                showMessage(`Training task created successfully! Task ID: ${result.task_id}. Training will continue in background.`, 'success');
+                
+                // Clear selected files
+                selectedFiles = [];
+                updateFileList();
+                updateSizeInfo();
+                updateUploadButton();
+                
+                // Clear any previous progress messages
                 uploadProgress.innerHTML = `
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i>
-                        Files processed successfully! Download started.<br>
-                        <small>The ZIP file contains: phrase counts CSV, word vectors (300-dim), and cleaned text.</small>
+                        <strong>Background training started!</strong><br>
+                        Task ID: ${result.task_id}<br>
+                        You can close this browser window. The training will continue on the server.
+                        Check the "Active Training Tasks" section below for progress updates.
                     </div>
                 `;
-            })
-            .catch(error => {
-                if (error.name === 'AbortError') {
-                    uploadProgress.innerHTML = `
-                        <div class="alert alert-warning">
-                            <i class="fas fa-clock me-2"></i>
-                            Request timed out after 60 minutes. The files may be too large or the server is busy.<br>
-                            Try with fewer or smaller files (max 500MB per file, 1GB total).
-                        </div>
-                    `;
-                } else {
-                    uploadProgress.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Error: ${error.message}
-                        </div>
-                    `;
-                }
-            })
-            .finally(() => {
+                
+                // Refresh tasks list
+                await loadActiveTasks();
+                
+                // Start polling for updates if there are active tasks
+                startPolling();
+                
+            } catch (error) {
+                console.error('Error starting training:', error);
+                showMessage(`Failed to start training: ${error.message}`, 'danger');
+                uploadProgress.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error: ${escapeHtml(error.message)}
+                    </div>
+                `;
+            } finally {
                 uploadButton.disabled = false;
-                spinner.classList.add('d-none');
-                uploadButton.innerHTML = buttonText;
-            });
+                uploadButton.innerHTML = originalText;
+                updateUploadButton();
+            }
+        }
+
+        function showMessage(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            uploadProgress.insertBefore(alertDiv, uploadProgress.firstChild);
+            setTimeout(() => {
+                if (alertDiv.parentNode) alertDiv.remove();
+            }, 5000);
+        }
+
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(() => {
+                loadActiveTasks();
+            }, 5000); // Poll every 5 seconds for updates
+        }
+
+        // Manual refresh function for tasks
+        window.checkTaskStatus = checkTaskStatus;
+        window.removeFile = removeFile;
+        window.loadActiveTasks = loadActiveTasks;
+
+        // Initialize
+        uploadButton.addEventListener('click', startBackgroundTraining);
+        
+        // Load tasks on page load
+        loadActiveTasks();
+        startPolling();
+
+        // Stop polling when page is hidden (optional, but keeps it efficient)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (pollingInterval) clearInterval(pollingInterval);
+                pollingInterval = null;
+            } else {
+                if (!pollingInterval) {
+                    loadActiveTasks();
+                    startPolling();
+                }
+            }
         });
     </script>
 </body>
